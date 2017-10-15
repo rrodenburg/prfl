@@ -25,7 +25,7 @@ DistPadWall = 20 #distance paddles <-> wall
 
 #canvas declaration
 window = pygame.display.set_mode((WIDTH,HEIGTH))
-pygame.display.set_caption('PONGG')
+pygame.display.set_caption('PONG')
 
 #function to draw the current screen:
 def draw(canvas,_padL_pos,_padR_pos,_ball_pos):
@@ -116,6 +116,7 @@ def wincheck(ball_position, ball_velocity, score): #Check if player wins
     return (score, ball_position, ball_velocity)
         
 def initialize_ball():
+    velinit_list = list(range(3,5)) + list(range(-4,-2))
     ball_pos = np.array([WIDTH/2-BALL_RADIUS,HEIGTH/2-BALL_RADIUS])
     ball_vel = np.array([random.choice(velinit_list),random.choice(velinit_list)])
     return (ball_pos, ball_vel)
@@ -134,8 +135,6 @@ padL_vel = 0 #y-velocity of left pad
 padR_vel = 0 #y-velocity of right pad
 padL_pos= np.array([DistPadWall,HEIGTH/2-PAD_HEIGTH/2]) #these positions denote the upperleft corner of the pad; (0,0) is UL corner of screen
 padR_pos= np.array([WIDTH - DistPadWall - PAD_WIDTH, HEIGTH/2-PAD_HEIGTH/2])
-
-velinit_list = list(range(3,5)) + list(range(-4,-2))
 
 #main game loop
 running = True
