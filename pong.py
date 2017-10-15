@@ -94,11 +94,11 @@ def updateball_pos(velocity,currentpos,_padL_pos,_padR_pos): #returns new ball p
     #collision with L pad
     if ((currentpos[0]+velocity[0]) <= (_padL_pos[0]+PAD_WIDTH)                        #x-coordinates of collision condition
     and (_padL_pos[1] + PAD_HEIGTH - 2*BALL_RADIUS) >= currentpos[1] >= _padL_pos[1]): #y-coordinates of collision conditionv
-        velocity[0] = -velocity[0]
+        velocity[0] = abs(velocity[0])
     #collision wit R pad
     if (((currentpos[0] + velocity[0] + 2 * BALL_RADIUS)  >= _padR_pos[0])              #x-coordinates of collision condition
     and (_padR_pos[1] + PAD_HEIGTH - 2*BALL_RADIUS) >= currentpos[1] >= _padR_pos[1]):  #y-coordinates of collision conditionv
-        velocity[0] = -velocity[0]
+        velocity[0] = -(abs(velocity[0]))
     newposition = currentpos + velocity
     return (velocity,newposition)
     
