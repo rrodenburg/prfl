@@ -17,6 +17,8 @@ BALL_RADIUS = 10
 PAD_WIDTH = 20
 PAD_HEIGTH = 80
 VELOCITY = 8 #pad velocity
+pad_velocity_ai = 1.5 #ai velocity of computer opponent
+number_of_players = 1
 
 DistPadWall = 20 #distance paddles <-> wall
 
@@ -118,6 +120,14 @@ def initialize_ball():
     ball_vel = np.array([random.choice(velinit_list),random.choice(velinit_list)])
     return (ball_pos, ball_vel)
 
+def updatepad_pos_ai(velocity, currentypos, ball_position):
+    if currentypos + 0.5*PAD_HEIGTH > ball_position[1]:
+        return currentypos - velocity
+    if currentypos + 0.5*PAD_HEIGTH < ball_position[1]:
+        return currentypos + velocity
+    else:
+        return currentypos
+
 #initialize variables
 score = [0,0]
 padL_vel = 0 #y-velocity of left pad
@@ -133,7 +143,10 @@ running = True
 while running:
     (ball_vel, ball_pos) = updateball_pos(ball_vel,ball_pos,padL_pos,padR_pos)
     padL_pos[1] = updatepad_pos(padL_vel,padL_pos[1])
-    padR_pos[1] = updatepad_pos(padR_vel,padR_pos[1])
+    if number_of_players == 2:
+        padR_pos[1] = updatepad_pos(padR_vel,padR_pos[1])
+    else:
+        padR_pos[1] = updatepad_pos_ai(pad_velocity_ai, padR_pos[1], ball_pos)
     window.fill(BLACK)
     draw(window, padL_pos, padR_pos,ball_pos)
     (score, ball_pos, ball_vel) = wincheck(ball_pos, ball_vel, score)
