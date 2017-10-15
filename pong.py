@@ -92,13 +92,34 @@ def updateball_pos(velocity,currentpos,_padL_pos,_padR_pos): #returns new ball p
     if (currentpos[1] + velocity[1]) <= 0 or (currentpos[1] + 2*BALL_RADIUS) >= HEIGTH:        
         velocity[1] = -velocity[1]
     #collision with L pad
-    if (currentpos[0]+velocity[0] <= _padL_pos[0]+PAD_WIDTH #x-coordinates of collision condition
-    and _padL_pos[1] + PAD_HEIGTH - 2*BALL_RADIUS >= currentpos[0] >= _padL_pos[0]): #y-coordinates of collision conditionv
+    if ((currentpos[0]+velocity[0]) <= (_padL_pos[0]+PAD_WIDTH)                        #x-coordinates of collision condition
+    and (_padL_pos[1] + PAD_HEIGTH - 2*BALL_RADIUS) >= currentpos[1] >= _padL_pos[1]): #y-coordinates of collision conditionv
+        velocity[0] = -velocity[0]
+    #collision wit R pad
+    if (((currentpos[0] + velocity[0] + 2 * BALL_RADIUS)  >= _padR_pos[0])              #x-coordinates of collision condition
+    and (_padR_pos[1] + PAD_HEIGTH - 2*BALL_RADIUS) >= currentpos[1] >= _padR_pos[1]):  #y-coordinates of collision conditionv
         velocity[0] = -velocity[0]
     newposition = currentpos + velocity
     return (velocity,newposition)
+    
+def wincheck(ball_position, ball_velocity, score): #Check if player wins
+    if ball_position[0] <= 0:
+        score[0] += 1
+        print("player right wins, current score is {}".format(score))
+        (ball_position, ball_velocity) = initialize_ball()
+    if (ball_position[0] + 2 * BALL_RADIUS) >= WIDTH:
+        score[1] += 1
+        print('player left wins, current score is {}'.format(score))
+        (ball_position, ball_velocity) = initialize_ball()
+    return (score, ball_position, ball_velocity)
+        
+def initialize_ball():
+    ball_pos = np.array([WIDTH/2-BALL_RADIUS,HEIGTH/2-BALL_RADIUS])
+    ball_vel = np.array([random.choice(velinit_list),random.choice(velinit_list)])
+    return (ball_pos, ball_vel)
 
 #initialize variables
+score = [0,0]
 padL_vel = 0 #y-velocity of left pad
 padR_vel = 0 #y-velocity of right pad
 padL_pos= np.array([DistPadWall,HEIGTH/2-PAD_HEIGTH/2]) #these positions denote the upperleft corner of the pad; (0,0) is UL corner of screen
@@ -106,17 +127,16 @@ padR_pos= np.array([WIDTH - DistPadWall - PAD_WIDTH, HEIGTH/2-PAD_HEIGTH/2])
 
 velinit_list = list(range(3,5)) + list(range(-4,-2))
 
-ball_pos = np.array([WIDTH/2-BALL_RADIUS,HEIGTH/2-BALL_RADIUS])
-ball_vel = np.array([random.choice(velinit_list),random.choice(velinit_list)])
-
 #main game loop
 running = True
+(ball_pos, ball_vel) = initialize_ball()
 while running:
     (ball_vel, ball_pos) = updateball_pos(ball_vel,ball_pos,padL_pos,padR_pos)
     padL_pos[1] = updatepad_pos(padL_vel,padL_pos[1])
     padR_pos[1] = updatepad_pos(padR_vel,padR_pos[1])
     window.fill(BLACK)
     draw(window, padL_pos, padR_pos,ball_pos)
+    (score, ball_pos, ball_vel) = wincheck(ball_pos, ball_vel, score)
     for event in pygame.event.get():
         if event.type == QUIT:
             pygame.quit()
