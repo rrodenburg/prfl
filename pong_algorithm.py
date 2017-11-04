@@ -7,6 +7,7 @@ import numpy as np
 import pygame
 import random
 import matplotlib.pyplot as plt
+import sys
 
 game = pong_lib.Pong( 
                 number_of_players = 1, 
@@ -24,7 +25,7 @@ game.game_init()
 
 
 ### Hyperparameter settings
-epsilon = 0.9
+epsilon = 0.9 #probability to play a random action
 frame_stacks = 4
 games_to_play = 1
 
@@ -35,79 +36,82 @@ dataset = []
 
 total_frame_count = 0
 
+n_games_played = 0
 running = True
 while running:
-    for i in range(games_to_play):
-        #play as long as game lasts
-        episode_running = True
-        print('a new pong game has started!')
-        game.initialize_ball_pad_positions()
-        
-        #initialize a current state, the entry regarding this state will later be deleted from the dataset
-        
-        state = np.zeros([frame_stacks,84,84], dtype = 'int')
-        
-        while episode_running == True:
-            
-            ## Pick action following greedy policy
-            if epsilon > random.uniform(0, 1):
-                action = random.choice(['stay','up','down']) ## Let model pick next action to play
-            else:
-                action = random.choice(['stay','up','down']) ## Play random action
-                
-            #initialize array to save frames
-            next_state = np.empty([frame_stacks,84,84], dtype = 'int')
-            
-            # Run action and observe reward and next state
-            frame_accumulation = True
-            frame_count = 0
-            
-            reward = 0 # initialize reward
-            while frame_accumulation == True:
-                
-                #observe reward
-                if reward == 0: # does not allow to obtain a reward of +2 or -2 if game termination does not occur instantly
-                    reward += game.game_loop_action_input(action)
-                    
-                if reward != 0:
-                    print('someone won! game must terminate!')
-                    frame_accumulation = False
-                    episode_running = False #if game ends, start a new game
-                    
-                    #game had ended, thus delete the first entry from dateset (this entry contains a generated first state)
-                    print('remove entry from dataset')
-                    print(len(dataset))
-                    dataset.pop(0)
-                    print(len(dataset))
-                
-                #observe state
-                frame = pygame.surfarray.pixels2d(game.window).astype('float')
-                frame *= 255/np.amax(frame) # Normalize the pixel intensities
-                next_state[frame_count] = frame.astype('int')
-                
-                if frame_count == 3:
-                    frame_count = 0
-                    frame_accumulation = False
-                
-                frame_count += 1
-            
-            #write an entry into the dataset
-            dataset.append((state, action, reward, next_state))
-            print('dataset entry is written!')
-            
-            #Set current_state to the previous state
-            state = next_state
+    #play as long as game lasts
+    episode_running = True
+    print('a new pong game has started!')
+    game.initialize_ball_pad_positions()
     
-    running = False
+    #initialize a current state, the transition from the initialed state will later be deleted from the dataset
+    
+    state = np.zeros([frame_stacks,84,84], dtype = 'int')
+    
+    episode_state_count = 0 #counts the state number of the current episode
+    
+    while episode_running == True:
+        
+        ## Pick action following greedy policy; 1 action per episode
+        if epsilon > random.uniform(0, 1):
+            action = random.choice(['stay','up','down']) ## Let model pick next action to play
+        else:
+            action = random.choice(['stay','up','down']) ## Play random action
             
-                   
+        #initialize array to save frames
+        next_state = np.empty([frame_stacks,84,84], dtype = 'int')
+        
+        # Run action and observe reward and next state
+        frame_accumulation = True
+        frame_count = 0
+        
+        reward = 0 # initialize reward
+        while frame_accumulation == True:
             
-print(dataset[5][0].shape)
+            #observe reward
+            if reward == 0: # does not allow to obtain a reward of +2 or -2 if game termination does not occur instantly
+                reward += game.game_loop_action_input(action)
+                
+            if reward != 0:
+                print('someone won! game must terminate!')
+                n_games_played += 1
+                frame_accumulation = False
+                episode_running = False #if game ends, start a new game
+            
+            #observe state
+            frame = pygame.surfarray.pixels2d(game.window).astype('float')
+            frame *= 255/np.amax(frame) # Normalize the pixel intensities
+            next_state[frame_count] = frame.astype('int')
+            
+            if frame_count == 3:
+                frame_count = 0
+                frame_accumulation = False
+            
+            frame_count += 1
+        
+        #write an entry into the dataset
+        if episode_state_count > 0:
+            dataset.append((state, action, reward, next_state))
+            
+        episode_state_count += 1
+        print('dataset entry is written!')
+        
+        #Set current_state to the previous state
+        state = next_state
+    
+    if n_games_played == games_to_play:
+        pygame.quit()
+        running = False
+            
+np.save('repl_mem', dataset)                   
+np.set_printoptions(threshold=np.nan)            
+print(dataset[5][0])
 print(np.amax(dataset[5][3][2]))
 plt.imshow(dataset[5][3][0], cmap = 'Greys')
 #plt.imshow(dataset[5][0][1], cmap = 'Greys')
-plt.show()    
-                
+#plt.show()    
+
+sys.exit()
                 
                     
                 

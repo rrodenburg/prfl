@@ -229,18 +229,12 @@ class Pong(object):
         
         # Draw the screen
         self.draw(self.window, self.padL_pos, self.padR_pos, self.ball_pos)
-        
-        #if reward == -1 or reward == 1:
-        #    running = False
+
         for event in pygame.event.get():
             if event.type == QUIT:
                 pygame.quit()
                 sys.exit()
                 self.running = False
-        #s    if event.type == KEYDOWN: #keydown means you are pushing any button
-        #s        (self.padL_vel, self.padR_vel) = self.keydown(event, self.padL_vel, self.padR_vel)
-        #s    if event.type == KEYUP:
-        #s        (self.padL_vel,self.padR_vel) = self.keyup(event, self.padL_vel, self.padR_vel)
         pygame.display.update()
         self.fps.tick(frames_per_sec)
         return reward
