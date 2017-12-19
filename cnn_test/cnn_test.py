@@ -13,6 +13,7 @@ frame_stacks = 4
 width = 84
 heigth = 84
 
+tf.reset_default_graph()
 #def convnet(mode):
 #    x = tf.placeholder("int32",(-1,width,heigth,frame_stacks)) #input states
 #    y = tf.placeholder("float32",(-1)) #y-values for loss function, as described in atari paper
@@ -82,17 +83,18 @@ predicted_classes = [p["classes"] for p in predictions]
 
 x = tf.placeholder("float32",(None,width,heigth,frame_stacks)) #input states
 y = tf.placeholder("float32",(None)) #y-values for loss function, as described in atari paper
-a = tf.placeholder("float32",(None)) #actions played in batch; 0: nothing, 1: up, 2: down
+a = tf.placeholder("int32",(None)) #actions played in batch; 0: nothing, 1: up, 2: down
 # Convolutional Layer #1
 conv1 = tf.layers.conv2d(
   inputs = x,
-  filters = 5,
+  filters = 32,
   kernel_size = [8, 8],
   strides = (4,4),
   padding = "valid", #valid means no padding
-  activation = tf.nn.relu)
+  activation = tf.nn.relu) #output is 20x20x32
+
 # Output layer (dense layer)
-conv1_flat = tf.reshape(conv1,[-1,20*20*5])
+conv1_flat = tf.reshape(conv1,[-1,20*20*32])
 output = tf.layers.dense(inputs=conv1_flat, units = 3)
 best_action = tf.argmax(input=output, axis=1)
 max_Q_value = tf.reduce_max(output,axis=1, name = 'Q_max')
@@ -110,9 +112,9 @@ train_op = optimizer.minimize(
             loss=loss,
             global_step=global_step)
 
-model_params = {
-	'learning_rate' : learning_rate
-				}
+#model_params = {
+#	'learning_rate' : learning_rate
+#				}
 
 #Q_estimator = tf.estimator.Estimator(
 #    	model_fn=convnet, params=model_params)#, model_dir="/tmp/convnet_model")
@@ -122,50 +124,65 @@ predict_x = [x.astype('float32') for x in predict_x]
 #print(predict_x.shape)
 
 print(type(memory))
-idx = np.random.randint(len(memory), size = 32)
-train = memory[idx]
-print(train[0])
-#train_x = np.array([x.astype('float32') for x in np.take(train, indices = 0, axis = 1)])
-train_x = np.take(train, indices = 0, axis = 1)
-train_x = [x.astype('float32') for x in train_x]
-train_y = [x[3].astype('float32') for x in train]
 
-print(len(predict_x), len(predict_x[0]), predict_x[0].shape, predict_x[0])
-print(len(train_x), len(train_x[0]), train_x[0].shape, type(train_x[0]))
+def mini_batch_sample(memory):
+#Select random mini-batch of 32 transitions
+	idx = np.random.randint(len(memory), size = 32)
+	mini_batch = memory[idx]
 
-trans_dict = {
+	mini_batch_x = [x[0].astype('float32') for x in mini_batch]
+	mini_batch_y = [x[3].astype('float32') for x in mini_batch]
+
+	trans_dict = {
 			  'stay' : 0,
 			  'up' : 1,
 			  'down': 0
 			  }
 
-train_action = [trans_dict[x[1]] for x in train]
-print(train_action)
-#print(train_y)
-
-#predict_input_fn = tf.estimator.inputs.numpy_input_fn(
-#    x={"x": predict_x},
-#    num_epochs=1,
-#    shuffle=False)
+	mini_batch_action = [trans_dict[x[1]] for x in mini_batch]
+	return mini_batch_x, mini_batch_y, mini_batch_action
 
 
-#predictions = list(Q_estimator.predict(input_fn=predict_input_fn))
-#print(predictions)
 
 
 
 sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
-best_action, q_value = sess.run([best_action, max_Q_value], {x: predict_x})
-print(best_action, q_value)
 
-feed_dict_train = {
-					x : train_x,
+#print(best_action, q_value)
+
+
+
+
+#print(len(mini_batch_x), len(mini_batch_x[0]), mini_batch_x[0].shape, type(mini_batch_x[0]))
+#print(len(mini_batch_y), len(mini_batch_y[0]), mini_batch_y[0].shape, type(mini_batch_y[0]))
+#print(len(mini_batch_action))
+
+mini_batch_x, mini_batch_y, mini_batch_action = mini_batch_sample(memory)
+_, q_value = sess.run([best_action, max_Q_value], {x: mini_batch_y})
+
+for i in range(50):
+	
+	#print(q_value)
+	feed_dict_train = {
+					x : mini_batch_x,
 					y : q_value,
-					a : train_action
+					a : mini_batch_action
 					}
+	
+	#lossy = sess.run([loss], feed_dict = feed_dict_train)
+	_, loss_value = sess.run([train_op, loss], feed_dict = feed_dict_train)
+	print(loss_value)
 
-sess.run(train_op)
-loss_value = sess.run([loss], feed_dict = feed_dict_train)
-print(loss_value)
+#variables = sess.run(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+variables = tf.trainable_variables()
+
+
+sess.close()
+
+#copy_ops = [variables[ix+len(variables)//2].assign(var.value()) for ix, var in enumerate(variables[0:len(variables)//2])]
+#
+#sess2 = tf.Session()
+#sess2.run(init)
+#map(lambda x: sess.run(x), copy_ops)
