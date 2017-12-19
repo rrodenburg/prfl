@@ -27,7 +27,7 @@ game.game_init()
 ### Hyperparameter settings
 epsilon = 0.9 #probability to play a random action
 frame_stacks = 4
-games_to_play = 3
+games_to_play = 4
 max_length_dataset = 1e6
 learning_rate = 0.00025
 
@@ -126,7 +126,7 @@ while running: #runs once through the loop per episode
             #observe state
             frame = pygame.surfarray.pixels2d(game.window).astype('float')
             frame *= 255/np.amax(frame) # Normalize the pixel intensities
-            next_state[frame_count] = frame.astype('int')
+            next_state[frame_count] = frame.astype('int32')
             
             if frame_count == 3:
                 frame_count = 0
