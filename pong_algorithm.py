@@ -27,7 +27,7 @@ game.game_init()
 ### Hyperparameter settings
 epsilon = 0.9 #probability to play a random action
 frame_stacks = 4
-games_to_play = 4
+games_to_play = 10
 max_length_dataset = 1e6
 learning_rate = 0.00025
 
@@ -91,7 +91,7 @@ while running: #runs once through the loop per episode
     
     #initialize a current state, the transition from the initialed state will later be deleted from the dataset
     
-    state = np.zeros([frame_stacks,84,84], dtype = 'int')
+    state = np.zeros([frame_stacks,84,84], dtype = 'int8')
     
     episode_state_count = 0 #counts the state number of the current episode
     
@@ -99,12 +99,12 @@ while running: #runs once through the loop per episode
         
         ## Pick action following greedy policy; 1 action per episode
         if epsilon > random.uniform(0, 1):
-            action = random.choice(['stay','up','down']) ## Let model pick next action to play
+            action = np.random.randint(3) ## Let model pick next action to play, 0 = stay, 1 = up, 2 = down
         else:
-            action = random.choice(['stay','up','down']) ## Play random action
+            action = np.random.randint(3) ## Play random action
             
         #initialize array to save frames
-        next_state = np.empty([frame_stacks,84,84], dtype = 'int')
+        next_state = np.empty([frame_stacks,84,84], dtype = 'int8')
         
         # Run action and observe reward and next state
         frame_accumulation = True
@@ -126,7 +126,7 @@ while running: #runs once through the loop per episode
             #observe state
             frame = pygame.surfarray.pixels2d(game.window).astype('float')
             frame *= 255/np.amax(frame) # Normalize the pixel intensities
-            next_state[frame_count] = frame.astype('int32')
+            next_state[frame_count] = frame.astype('int8') #save as int8 to reduce memory usage
             
             if frame_count == 3:
                 frame_count = 0
@@ -156,7 +156,7 @@ while running: #runs once through the loop per episode
         pygame.quit()
         running = False
             
-#np.save('repl_mem', dataset)                   
+np.save('../data/repl_mem', dataset)                   
 
 sys.exit()
                 

@@ -197,11 +197,11 @@ class Pong(object):
         return reward
         
     def updatepad_pos_action(self, velocity, currentypos, action): #returns new y-position of a pad
-        if currentypos < (self.heigth - self.pad_heigth) and action == 'down':
+        if currentypos < (self.heigth - self.pad_heigth) and action == 2:
             return currentypos + velocity
-        if currentypos > 0 and action == 'up':
+        if currentypos > 0 and action == 1:
             return currentypos - velocity
-        if currentypos > 0 and currentypos < (self.heigth - self.pad_heigth) and action == 'stay':
+        if currentypos > 0 and currentypos < (self.heigth - self.pad_heigth) and action == 0:
             return currentypos
         else: 
             return currentypos
