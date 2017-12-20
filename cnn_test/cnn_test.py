@@ -133,16 +133,19 @@ def mini_batch_sample(memory):
 	mini_batch_x = [x[0].astype('float32') for x in mini_batch]
 	mini_batch_y = [x[3].astype('float32') for x in mini_batch]
 
-	trans_dict = {
-			  'stay' : 0,
-			  'up' : 1,
-			  'down': 0
-			  }
+	#trans_dict = {
+	#		  'stay' : 0,
+	#		  'up' : 1,
+	#		  'down': 0
+	#		  }
 
-	mini_batch_action = [trans_dict[x[1]] for x in mini_batch]
-	return mini_batch_x, mini_batch_y, mini_batch_action
+	reward = [x[2] for x in mini_batch]
 
+	mini_batch_action = [x[1] for x in mini_batch]
+	return mini_batch_x, mini_batch_y, mini_batch_action, reward
 
+def create_y(reward, q_values):
+	return [q_value[idx] if x is 0 else reward[idx] for idx,x in enumerate(reward)]
 
 
 
@@ -150,24 +153,17 @@ sess = tf.Session()
 init = tf.global_variables_initializer()
 sess.run(init)
 
-#print(best_action, q_value)
-
-
-
-
-#print(len(mini_batch_x), len(mini_batch_x[0]), mini_batch_x[0].shape, type(mini_batch_x[0]))
-#print(len(mini_batch_y), len(mini_batch_y[0]), mini_batch_y[0].shape, type(mini_batch_y[0]))
-#print(len(mini_batch_action))
-
-mini_batch_x, mini_batch_y, mini_batch_action = mini_batch_sample(memory)
+mini_batch_x, mini_batch_y, mini_batch_action, reward = mini_batch_sample(memory)
 _, q_value = sess.run([best_action, max_Q_value], {x: mini_batch_y})
+
+target_y = create_y(reward, q_value)
 
 for i in range(50):
 	
 	#print(q_value)
 	feed_dict_train = {
 					x : mini_batch_x,
-					y : q_value,
+					y : target_y,
 					a : mini_batch_action
 					}
 	
