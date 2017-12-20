@@ -1,0 +1,7 @@
+To do / check
+
+Network is exploding during training:
+- maybe due to recursiveness when creating y
+- create a static y and train against this, to see if loss goes down.
+- maybe add batch normalization?
+- check learning rate
