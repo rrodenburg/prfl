@@ -121,13 +121,13 @@ target_y = create_y(reward, q_value)
 
 loss_value = 0
 
-for i in range(1000):
+for i in range(10000):
 	
 	#action = determine_action(predict_x)
 
 	loss_value += backprop(memory, mini_batch_size)
 	
-	if i % 50 == 0: 
+	if i % 50 == 0 and i > 0: 
 		print('loss after ', i, ' backprop cycles = ', loss_value)
 		loss_value = 0
 
