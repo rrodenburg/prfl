@@ -141,14 +141,14 @@ n_games_played = 0
 games_won = 0 
 
 # stats initialization
-running_score_mean = 0
+running_score_mean = 0.0
 running_score_alpha = 0.01
 running_score_mean_list = []
 
-q_value_mean = 0
+q_value_mean = 0.0
 q_value_alpha = 0.01
 
-loss_value = 0
+loss_value = 0.0
 backprop_cycles = 0 
 
 #initialize tensorflow settings and variables
@@ -231,8 +231,8 @@ while running: #runs once through the loop per episode
 
         	# display statistics
         	if total_transition_count % 200 == 0:
-        		print('backprop_cycles : ', backprop_cycles, ', episodes : ', n_games_played, ', games won : ', games_won, ', loss : ', 
-        			loss_value, ', running score avg', running_score_mean, ', running q_value mean :', q_value_mean)
+        		print('backprop_cycles : {}, episodes : {} , games won : {} , loss : {} , running score avg : {} , running q_value mean : {}'.format(backprop_cycles, n_games_played, games_won, 
+        			loss_value, running_score_mean, q_value_mean))
         		loss_value = 0
 
         episode_state_count += 1
