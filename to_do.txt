@@ -1,10 +1,37 @@
 To do / check
-- Create functions for tensor flow network
+- DONE Create functions and libfor tensor flow network
 - Implement tensorboard
 - Design custom cnn with batch normalisation layers
+- Create lib for reinf learning 
+
+Add evaluation metric:
+- avg game length
 
 Network is exploding during training:
 - maybe due to recursiveness when creating y
 - maybe add batch normalization?
 - check learning rate
 
+Pong settings (quick training):
+number_of_players = 1,
+width = width, 
+heigth = heigth, 
+ball_radius = 2, 
+pad_width = 4, 
+pad_heigth = 14, 
+pad_velocity = 8, 
+pad_velocity_ai = 4,
+DistPadWall = 4,
+ball_velocity = 1.5)
+
+(slow training, but able to catch first ball, exploding):
+number_of_players = 1
+width = width, 
+heigth = heigth, 
+ball_radius = 2, 
+pad_width = 4, 
+pad_heigth = 14, 
+pad_velocity = 8, 
+pad_velocity_ai = 2,
+DistPadWall = 4,
+ball_velocity = 0.7)
