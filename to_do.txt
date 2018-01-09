@@ -1,16 +1,26 @@
+tensorboard --logdir 18 --host=127.0.0.1
+
 To do / check
-- DONE Create functions and libfor tensor flow network
-- Implement tensorboard
+- DONE Create functions and lib for tensor flow network
+- DONE Implement tensorboard
+- Implement custom tensor board stats
+- Implement tensor board histograms
+- Implement prediction network and weight copy-ing
+	- DONE create test code in ccn_test.py
 - Design custom cnn with batch normalisation layers
 - Create lib for reinf learning 
 
 Add evaluation metric:
-- avg game length
+- avg game length per epoch
+- avg score per epoch
 
 Network is exploding during training:
 - maybe due to recursiveness when creating y
 - maybe add batch normalization?
 - check learning rate
+
+Problems to solve:
+- some images miss a pad
 
 Pong settings (quick training):
 number_of_players = 1,

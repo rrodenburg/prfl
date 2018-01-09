@@ -164,13 +164,17 @@ while running:
     		# Accumulate statistics
         	n_games_played, games_won, running_score_mean, q_value_mean = accumulate_stats(reward, n_games_played, games_won, running_score_mean, running_score_alpha, q_value_mean, q_value, q_value_alpha)
 
-        	loss_value, backprop_cycles = cnn.update_nn(dataset, mini_batch_size, loss_value, backprop_cycles, total_transition_count, replay_start_size)
+        	loss_value, backprop_cycles = cnn.update_nn(dataset, mini_batch_size, loss_value, total_transition_count, replay_start_size)
 
         	dataset, total_transition_count = repl_memory_append(dataset, state, action, reward, next_state, total_transition_count, max_length_dataset)
 
         	# display statistics
-        	if total_transition_count % 200 == 0:
+        	#if total_transition_count % 5 == 0:
+        	#	cnn.tf_summary(total_transition_count)
+
+        	if (backprop_cycles % 200 == 0) and (backprop_cycles > 0):
         		loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
+        		#cnn.model_save(total_transition_count)
 
         episode_state_count += 1
         
