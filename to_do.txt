@@ -3,7 +3,7 @@ tensorboard --logdir 18 --host=127.0.0.1
 To do / check
 - DONE Create functions and lib for tensor flow network
 - DONE Implement tensorboard
-- Implement custom tensor board stats
+- Implement custom tensor board stats (https://stackoverflow.com/questions/40722413/how-to-use-several-summary-collections-in-tensorflow)
 - Implement tensor board histograms
 - DONE Implement prediction network and weight copy-ing
 	- DONE create test code in ccn_test.py

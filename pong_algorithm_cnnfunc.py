@@ -34,7 +34,8 @@ max_length_dataset = 1e6
 learning_rate = 0.00025
 replay_start_size = 50
 mini_batch_size = 16
-network_copy = 1000
+network_copy = 200
+epoch_length = 200
 
 cnn = cnn_lib.Network(
 					width = width,
@@ -119,6 +120,10 @@ def accumulate_stats(reward, n_games_played, games_won, running_score_mean, runn
 	return n_games_played, games_won, running_score_mean, q_value_mean
 
 
+
+
+
+
 ### initialize dataset
 dataset = []
 total_transition_count = 0
@@ -127,6 +132,8 @@ n_games_played = 0
 games_won = 0 
 
 # stats initialization
+epoch = 0
+
 running_score_mean = 0.0
 running_score_alpha = 0.01
 
@@ -173,12 +180,20 @@ while running:
         	#if total_transition_count % 5 == 0:
         	#	cnn.tf_summary(total_transition_count)
 
-        	if (backprop_cycles % 200 == 0) and (backprop_cycles > 0):
+        	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
         		loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
         		#cnn.model_save(total_transition_count)
 
         	if (backprop_cycles % network_copy == 0) and (backprop_cycles > 0):
         		cnn.copy_network_weights()
+        		
+
+        	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
+        		cnn.accumulate_epoch_stats(games_won, n_games_played, epoch)
+        		epoch += 1
+        		games_won = 1
+        		n_games_played = 1
+
 
 
 

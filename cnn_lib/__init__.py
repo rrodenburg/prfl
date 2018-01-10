@@ -1,6 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import os
+import shutil
 
 class Network(object):
 
@@ -29,30 +30,42 @@ class Network(object):
 
 		while os.path.isdir(self.logdir) == True:
 			self.logdir = self.logdir[:-1] + str(int(self.logdir[-1]) + 1)
+			
+			#shutil.rmtree(self.logdir)
 		
+		print('dir exists :', os.path.isdir(self.logdir))
 		print('tensorboard data is saved in :', self.logdir)
 
 		### Initiate training and action picking graph
-		self.g_train = tf.Graph()
-		with self.g_train.as_default():
-			self.x_t, self.y, self.a = self.network_param_init()
-			self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t)
-			self.loss = self.loss_func()
-			self.train_op, self.global_step = self.train()
+		
+		
+		self.x_t, self.y, self.a, self.image_summ = self.network_param_init()
+		self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t, '_train')
+		self.loss, self.loss_sum = self.loss_func()
+		self.train_op, self.global_step = self.train()
 
-			self.init_t = tf.global_variables_initializer()
-			self.variables_t = tf.trainable_variables()
-			self.summ_t = tf.summary.merge_all()
+		
+		#self.variables_t = tf.trainable_variables(scope = None)
+		self.variables_t = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_train')
+
+		self.average_score, self.n_games_played, self.avg_score_summ, self.n_games_played_summ = self.stats_var_init()
+		
+		#self.summ_loss = tf.summary.merge_all()#([self.loss_sum])
+		self.summ_loss = tf.summary.merge([self.loss_sum, self.image_summ])
+		self.epoch_stats = tf.summary.merge([self.avg_score_summ, self.n_games_played_summ])
+		#self.epoch_stats = tf.summary.merge(['average_score'])
 
 		### Initiate graph to generate y as backprop target
-		self.g_pred = tf.Graph()
-		with self.g_pred.as_default():
-			self.x_pred, _, _ = self.network_param_init()
-			_, self.best_action_pred, self.max_Q_value_pred = self.network(self.x_pred)
 
-			self.init_pred = tf.global_variables_initializer()
-			self.variables_pred = tf.trainable_variables()
-			self.summ_pred = tf.summary.merge_all()
+		self.x_pred, _, _, _ = self.network_param_init()
+		_, self.best_action_pred, self.max_Q_value_pred = self.network(self.x_pred, '_predict')
+
+		#self.init_pred = tf.global_variables_initializer()
+		self.variables_pred = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_predict')
+		#self.summ_pred = tf.summary.merge_all()
+
+		### Initialize variables
+		self.init = tf.global_variables_initializer()
 
 	def network_param_init(self):
 
@@ -60,91 +73,102 @@ class Network(object):
 		y = tf.placeholder("float32",(None), name = 'y') #y-values for loss function, as described in atari paper
 		a = tf.placeholder("int32",(None), name = 'actions') #actions played in batch; 0: nothing, 1: up, 2: down
 
-		tf.summary.image('input', x, 3)
+		image_summ = tf.summary.image('input', x, 3)
 	
-		return x, y, a
+		return x, y, a, image_summ
+
+	def stats_var_init(self):
+
+		average_score = tf.Variable(0.0, 'average_score')
+		n_games_played = tf.Variable(0, 'n_games_played')
+
+		avg_score_summ = tf.summary.scalar("average score", average_score)
+		n_games_summ = tf.summary.scalar("games played", n_games_played)
+
+		return average_score, n_games_played, avg_score_summ, n_games_summ
 
 	def tf_session_init(self):
 		
 		#tf.reset_default_graph()
 		### initialize training graph
-		self.sess_t = tf.Session(graph = self.g_train)
-		self.sess_t.run(self.init_t)
+		self.sess = tf.Session()
+		self.sess.run(self.init)
 
 		### initialize prediction graph
-		self.sess_pred = tf.Session(graph = self.g_pred)
-		self.sess_pred.run(self.init_pred)
+		#self.sess_pred = tf.Session(graph = self.g_pred)
+		#self.sess_pred.run(self.init_pred)
 
 		### initialize tensorboard
 		#self.saver = tf.train.Saver()
 		self.writer = tf.summary.FileWriter(self.logdir)
-		self.writer.add_graph(self.sess_t.graph)
-		self.writer.add_graph(self.sess_pred.graph)
+		self.writer.add_graph(self.sess.graph)
+		#self.writer.add_graph(self.sess_pred.graph)
 
-	def tf_summary(self, iteration):
-
-		self.sess.run(self.summ)
-		self.writer.add_summary(s, iteration)
+	#def tf_summary(self, iteration):
+#
+	#	self.sess.run(self.summ)
+	#	self.writer.add_summary(s, iteration)
 
 	def model_save(self, iteration):
 
 		self.saver(self.sess, os.path.join(self.logdir, 'model.ckpt'), iteration)
 
-	def nature_cnn(self, x_input):
+	def nature_cnn(self, x_input, name):
 
+		with tf.variable_scope("network" + name):
 		# Convolutional Layers
-		conv1 = tf.layers.conv2d(
-		  inputs = x_input,
-		  filters = 32,
-		  kernel_size = [8, 8],
-		  strides = (4,4),
-		  padding = "valid", #valid means no padding
-		  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
-		  bias_initializer=tf.zeros_initializer(),
-		  activation = tf.nn.relu,
-		  name = 'conv1') #output is 20x20x32
-
-		conv2 = tf.layers.conv2d(
-		  inputs = conv1,
-		  filters = 64,
-		  kernel_size = [4, 4],
-		  strides = (2,2),
-		  padding = "valid", #valid means no padding
-		  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
-		  bias_initializer=tf.zeros_initializer(),
-		  activation = tf.nn.relu,
-		  name = 'conv2') #output is 9x9x64
-
-		conv3 = tf.layers.conv2d(
-		  inputs = conv2,
-		  filters = 64,
-		  kernel_size = [3, 3],
-		  strides = (1,1),
-		  padding = "valid", #valid means no padding
-		  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
-		  bias_initializer=tf.zeros_initializer(),
-		  activation = tf.nn.relu,
-		  name = 'conv3') #output is 7x7x64
-
-		# Output layer (dense layer)
-		conv3_flat = tf.reshape(conv3,[-1,7*7*64])
-		FC = tf.layers.dense(
-			inputs=conv3_flat, 
-			units = 512, 
-			kernel_initializer = tf.contrib.layers.xavier_initializer(), 
-			activation = tf.nn.relu, 
-			bias_initializer=tf.zeros_initializer(),
-			name = 'FC')
-
-		output = tf.layers.dense(
-			inputs = FC, 
-			units = 3,  
-			kernel_initializer = tf.contrib.layers.xavier_initializer(), 
-			bias_initializer=tf.zeros_initializer(),
-			name = 'output')
-
-		best_action = tf.argmax(input = output, axis = 1)
-		max_Q_value = tf.reduce_max(output, axis = 1, name = 'Q_max')
+			conv1 = tf.layers.conv2d(
+			  inputs = x_input,
+			  filters = 32,
+			  kernel_size = [8, 8],
+			  strides = (4,4),
+			  padding = "valid", #valid means no padding
+			  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
+			  bias_initializer=tf.zeros_initializer(),
+			  activation = tf.nn.relu,
+			  name = 'conv1' + name) #output is 20x20x32
+	
+			conv2 = tf.layers.conv2d(
+			  inputs = conv1,
+			  filters = 64,
+			  kernel_size = [4, 4],
+			  strides = (2,2),
+			  padding = "valid", #valid means no padding
+			  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
+			  bias_initializer=tf.zeros_initializer(),
+			  activation = tf.nn.relu,
+			  name = 'conv2' + name) #output is 9x9x64
+	
+			conv3 = tf.layers.conv2d(
+			  inputs = conv2,
+			  filters = 64,
+			  kernel_size = [3, 3],
+			  strides = (1,1),
+			  padding = "valid", #valid means no padding
+			  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
+			  bias_initializer=tf.zeros_initializer(),
+			  activation = tf.nn.relu,
+			  name = 'conv3' + name) #output is 7x7x64
+	
+			# Output layer (dense layer)
+			conv3_flat = tf.reshape(conv3,[-1,7*7*64])
+			FC = tf.layers.dense(
+				inputs=conv3_flat, 
+				units = 512, 
+				kernel_initializer = tf.contrib.layers.xavier_initializer(), 
+				activation = tf.nn.relu, 
+				bias_initializer=tf.zeros_initializer(),
+				name = 'FC' + name)
+	
+			output = tf.layers.dense(
+				inputs = FC, 
+				units = 3,  
+				kernel_initializer = tf.contrib.layers.xavier_initializer(), 
+				bias_initializer=tf.zeros_initializer(),
+				name = 'output' + name)
+	
+			best_action = tf.argmax(input = output, axis = 1)
+			max_Q_value = tf.reduce_max(output, axis = 1, name = 'Q_max' + name)
 
 		return output, best_action, max_Q_value
 
@@ -156,9 +180,9 @@ class Network(object):
 			Q_values = tf.diag_part(tf.matmul(self.output, onehot_actions))
 			loss = tf.reduce_mean(tf.square(self.y - Q_values), axis = 0, name = 'loss')
 
-			tf.summary.scalar("loss", loss)
+			loss_sum = tf.summary.scalar("loss", loss)
 
-		return loss
+		return loss, loss_sum
 
 	def train(self):
 
@@ -190,13 +214,13 @@ class Network(object):
 	
 	def pick_greedy_action(self, frame_stack):
 		frame_stack = [[x.astype('float32') for x in frame_stack]]
-		action, q_value = self.sess_t.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
+		action, q_value = self.sess.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
 
 		return action[0], q_value[0]
 	
 	def backprop(self, memory, mini_batch_size):
 		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, mini_batch_size)
-		_, q_value = self.sess_pred.run([self.best_action_pred, self.max_Q_value_pred], {self.x_pred: mini_batch_y})
+		_, q_value = self.sess.run([self.best_action_pred, self.max_Q_value_pred], {self.x_pred: mini_batch_y})
 	
 		target_y = self.create_y(reward, q_value) # select reward as y if episode had ended
 	
@@ -206,7 +230,7 @@ class Network(object):
 						self.a : mini_batch_action
 						}
 	
-		_, loss_value, global_step, s = self.sess_t.run([self.train_op, self.loss, self.global_step, self.summ_t], feed_dict = feed_dict_train)
+		_, loss_value, global_step, s = self.sess.run([self.train_op, self.loss, self.global_step, self.summ_loss], feed_dict = feed_dict_train)
 		#_, loss_value, global_step = self.sess_t.run([self.train_op, self.loss, self.global_step], feed_dict = feed_dict_train)
 
 		self.writer.add_summary(s, global_step)
@@ -222,9 +246,16 @@ class Network(object):
 		return loss_value, global_step
 
 	def copy_network_weights(self):
-		w_to_copy = self.sess_t.run(self.variables_t)
+		w_to_copy = self.sess.run(self.variables_t)
 	
 		for i in range(len(w_to_copy)):
-			self.sess_pred.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
+			self.sess.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
 	
 		return
+
+	def accumulate_epoch_stats(self, games_won, n_games_played, epoch):
+		average_score = games_won / n_games_played
+		
+		_ , _, s =self.sess.run([tf.assign(self.average_score, average_score), tf.assign(self.n_games_played, n_games_played), self.epoch_stats])
+
+		self.writer.add_summary(s, epoch)
