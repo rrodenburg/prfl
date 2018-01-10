@@ -5,7 +5,7 @@ To do / check
 - DONE Implement tensorboard
 - Implement custom tensor board stats
 - Implement tensor board histograms
-- Implement prediction network and weight copy-ing
+- DONE Implement prediction network and weight copy-ing
 	- DONE create test code in ccn_test.py
 - Design custom cnn with batch normalisation layers
 - Create lib for reinf learning 

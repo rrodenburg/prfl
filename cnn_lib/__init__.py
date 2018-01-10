@@ -32,10 +32,27 @@ class Network(object):
 		
 		print('tensorboard data is saved in :', self.logdir)
 
-		self.x, self.y, self.a = self.network_param_init()
-		self.output, self.best_action, self.max_Q_value = self.network()
-		self.loss = self.loss_func()
-		self.train_op, self.global_step = self.train()
+		### Initiate training and action picking graph
+		self.g_train = tf.Graph()
+		with self.g_train.as_default():
+			self.x_t, self.y, self.a = self.network_param_init()
+			self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t)
+			self.loss = self.loss_func()
+			self.train_op, self.global_step = self.train()
+
+			self.init_t = tf.global_variables_initializer()
+			self.variables_t = tf.trainable_variables()
+			self.summ_t = tf.summary.merge_all()
+
+		### Initiate graph to generate y as backprop target
+		self.g_pred = tf.Graph()
+		with self.g_pred.as_default():
+			self.x_pred, _, _ = self.network_param_init()
+			_, self.best_action_pred, self.max_Q_value_pred = self.network(self.x_pred)
+
+			self.init_pred = tf.global_variables_initializer()
+			self.variables_pred = tf.trainable_variables()
+			self.summ_pred = tf.summary.merge_all()
 
 	def network_param_init(self):
 
@@ -50,15 +67,19 @@ class Network(object):
 	def tf_session_init(self):
 		
 		#tf.reset_default_graph()
+		### initialize training graph
+		self.sess_t = tf.Session(graph = self.g_train)
+		self.sess_t.run(self.init_t)
 
-		self.sess = tf.Session()
-		self.init = tf.global_variables_initializer()
-		self.sess.run(self.init)
+		### initialize prediction graph
+		self.sess_pred = tf.Session(graph = self.g_pred)
+		self.sess_pred.run(self.init_pred)
 
-		self.summ = tf.summary.merge_all()
-		self.saver = tf.train.Saver()
+		### initialize tensorboard
+		#self.saver = tf.train.Saver()
 		self.writer = tf.summary.FileWriter(self.logdir)
-		self.writer.add_graph(self.sess.graph)
+		self.writer.add_graph(self.sess_t.graph)
+		self.writer.add_graph(self.sess_pred.graph)
 
 	def tf_summary(self, iteration):
 
@@ -69,11 +90,11 @@ class Network(object):
 
 		self.saver(self.sess, os.path.join(self.logdir, 'model.ckpt'), iteration)
 
-	def nature_cnn(self):
+	def nature_cnn(self, x_input):
 
 		# Convolutional Layers
 		conv1 = tf.layers.conv2d(
-		  inputs = self.x,
+		  inputs = x_input,
 		  filters = 32,
 		  kernel_size = [8, 8],
 		  strides = (4,4),
@@ -169,23 +190,24 @@ class Network(object):
 	
 	def pick_greedy_action(self, frame_stack):
 		frame_stack = [[x.astype('float32') for x in frame_stack]]
-		action, q_value = self.sess.run([self.best_action, self.max_Q_value], feed_dict = {self.x : frame_stack})
+		action, q_value = self.sess_t.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
 
 		return action[0], q_value[0]
 	
 	def backprop(self, memory, mini_batch_size):
 		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, mini_batch_size)
-		_, q_value = self.sess.run([self.best_action, self.max_Q_value], {self.x: mini_batch_y})
+		_, q_value = self.sess_pred.run([self.best_action_pred, self.max_Q_value_pred], {self.x_pred: mini_batch_y})
 	
 		target_y = self.create_y(reward, q_value) # select reward as y if episode had ended
 	
 		feed_dict_train = {
-						self.x : mini_batch_x,
+						self.x_t : mini_batch_x,
 						self.y : target_y,
 						self.a : mini_batch_action
 						}
 	
-		_, loss_value, global_step, s = self.sess.run([self.train_op, self.loss, self.global_step, self.summ], feed_dict = feed_dict_train)
+		_, loss_value, global_step, s = self.sess_t.run([self.train_op, self.loss, self.global_step, self.summ_t], feed_dict = feed_dict_train)
+		#_, loss_value, global_step = self.sess_t.run([self.train_op, self.loss, self.global_step], feed_dict = feed_dict_train)
 
 		self.writer.add_summary(s, global_step)
 	
@@ -198,3 +220,11 @@ class Network(object):
 			temp_loss = 0
 			global_step = 0
 		return loss_value, global_step
+
+	def copy_network_weights(self):
+		w_to_copy = self.sess_t.run(self.variables_t)
+	
+		for i in range(len(w_to_copy)):
+			self.sess_pred.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
+	
+		return

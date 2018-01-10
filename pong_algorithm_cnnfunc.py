@@ -34,6 +34,7 @@ max_length_dataset = 1e6
 learning_rate = 0.00025
 replay_start_size = 50
 mini_batch_size = 16
+network_copy = 1000
 
 cnn = cnn_lib.Network(
 					width = width,
@@ -175,6 +176,11 @@ while running:
         	if (backprop_cycles % 200 == 0) and (backprop_cycles > 0):
         		loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
         		#cnn.model_save(total_transition_count)
+
+        	if (backprop_cycles % network_copy == 0) and (backprop_cycles > 0):
+        		cnn.copy_network_weights()
+
+
 
         episode_state_count += 1
         

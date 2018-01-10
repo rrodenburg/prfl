@@ -216,10 +216,11 @@ def copy_weights():
 
 	with g_2.as_default():
 		train_var = tf.trainable_variables()
-		for i in range(len(train_var)):
-			ass = tf.assign(train_var[i], w_to_copy[i])
-			sess_2.run(ass)
-			#print('{} is copied'.format(i))
+
+	for i in range(len(train_var)):
+		#ass = tf.assign(train_var[i], w_to_copy[i])
+		sess_2.run(tf.assign(train_var[i], w_to_copy[i]))
+		#print('{} is copied'.format(i))
 	return
 
 
