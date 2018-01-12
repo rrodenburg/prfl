@@ -20,7 +20,7 @@ Network is exploding during training:
 - check learning rate
 
 Problems to solve:
-- some images miss a pad
+- NO PROBLEM some images miss a pad
 
 Pong settings (quick training):
 number_of_players = 1,

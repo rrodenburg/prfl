@@ -39,25 +39,28 @@ class Network(object):
 		### Initiate training and action picking graph
 		
 		
-		self.x_t, self.y, self.a, self.image_summ = self.network_param_init()
+		self.x_t, self.y, self.a = self.network_param_init()
 		self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t, '_train')
-		self.loss, self.loss_sum = self.loss_func()
+		self.loss = self.loss_func()
 		self.train_op, self.global_step = self.train()
 
 		
 		#self.variables_t = tf.trainable_variables(scope = None)
 		self.variables_t = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_train')
 
-		self.average_score, self.n_games_played, self.avg_score_summ, self.n_games_played_summ = self.stats_var_init()
+		self.average_score, self.n_games_played = self.stats_var_init()
 		
-		#self.summ_loss = tf.summary.merge_all()#([self.loss_sum])
-		self.summ_loss = tf.summary.merge([self.loss_sum, self.image_summ])
-		self.epoch_stats = tf.summary.merge([self.avg_score_summ, self.n_games_played_summ])
+		self.summ_per_state = tf.summary.merge_all(key = 'per_state')
+		self.summ_per_epoch = tf.summary.merge_all(key = 'per_epoch')
+
+		#([self.loss_sum])
+		#self.summ_loss = tf.summary.merge([self.loss_sum, self.image_summ])
+		#self.epoch_stats = tf.summary.merge([self.avg_score_summ, self.n_games_played_summ])
 		#self.epoch_stats = tf.summary.merge(['average_score'])
 
 		### Initiate graph to generate y as backprop target
 
-		self.x_pred, _, _, _ = self.network_param_init()
+		self.x_pred, _, _ = self.network_param_init()
 		_, self.best_action_pred, self.max_Q_value_pred = self.network(self.x_pred, '_predict')
 
 		#self.init_pred = tf.global_variables_initializer()
@@ -73,19 +76,19 @@ class Network(object):
 		y = tf.placeholder("float32",(None), name = 'y') #y-values for loss function, as described in atari paper
 		a = tf.placeholder("int32",(None), name = 'actions') #actions played in batch; 0: nothing, 1: up, 2: down
 
-		image_summ = tf.summary.image('input', x, 3)
+		tf.summary.image('input', x, 3, collections = ['per_state'])
 	
-		return x, y, a, image_summ
+		return x, y, a
 
 	def stats_var_init(self):
+		with tf.name_scope("epoch_stats"):
+			average_score = tf.Variable(0.0, 'average_score')
+			n_games_played = tf.Variable(0, 'n_games_played')
 
-		average_score = tf.Variable(0.0, 'average_score')
-		n_games_played = tf.Variable(0, 'n_games_played')
+		tf.summary.scalar("average score", average_score, collections = ['per_epoch'])
+		tf.summary.scalar("games played", n_games_played, collections = ['per_epoch'])
 
-		avg_score_summ = tf.summary.scalar("average score", average_score)
-		n_games_summ = tf.summary.scalar("games played", n_games_played)
-
-		return average_score, n_games_played, avg_score_summ, n_games_summ
+		return average_score, n_games_played
 
 	def tf_session_init(self):
 		
@@ -180,9 +183,9 @@ class Network(object):
 			Q_values = tf.diag_part(tf.matmul(self.output, onehot_actions))
 			loss = tf.reduce_mean(tf.square(self.y - Q_values), axis = 0, name = 'loss')
 
-			loss_sum = tf.summary.scalar("loss", loss)
+			tf.summary.scalar("loss", loss, collections = ['per_state'])
 
-		return loss, loss_sum
+		return loss
 
 	def train(self):
 
@@ -216,6 +219,8 @@ class Network(object):
 		frame_stack = [[x.astype('float32') for x in frame_stack]]
 		action, q_value = self.sess.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
 
+		tf.summary.scalar("max_Q_value", q_value[0], collections = ['per_state'])
+
 		return action[0], q_value[0]
 	
 	def backprop(self, memory, mini_batch_size):
@@ -230,32 +235,33 @@ class Network(object):
 						self.a : mini_batch_action
 						}
 	
-		_, loss_value, global_step, s = self.sess.run([self.train_op, self.loss, self.global_step, self.summ_loss], feed_dict = feed_dict_train)
+		_, global_step, s = self.sess.run([self.train_op, self.global_step, self.summ_per_state], feed_dict = feed_dict_train)
 		#_, loss_value, global_step = self.sess_t.run([self.train_op, self.loss, self.global_step], feed_dict = feed_dict_train)
 
 		self.writer.add_summary(s, global_step)
 	
-		return loss_value, global_step
+		return global_step
 
-	def update_nn(self, dataset, mini_batch_size, loss_value, total_transition_count, replay_start_size):
+	def update_nn(self, dataset, mini_batch_size, total_transition_count, replay_start_size):
 		if total_transition_count > replay_start_size:
-			temp_loss, global_step = self.backprop(dataset, mini_batch_size)
+			global_step = self.backprop(dataset, mini_batch_size)
 		else: # I dont know if this is a nice solution
-			temp_loss = 0
 			global_step = 0
-		return loss_value, global_step
+		return global_step
 
 	def copy_network_weights(self):
 		w_to_copy = self.sess.run(self.variables_t)
-	
-		for i in range(len(w_to_copy)):
-			self.sess.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
+		#w_assign_to = self.sess.run(self.variables_pred)
+		
+		self.sess.run([tf.assign(self.variables_pred[i], w_to_copy[i]) for i in range(len(w_to_copy))])
+		#for i in range(len(w_to_copy)):
+		#	self.sess.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
 	
 		return
 
 	def accumulate_epoch_stats(self, games_won, n_games_played, epoch):
 		average_score = games_won / n_games_played
 		
-		_ , _, s =self.sess.run([tf.assign(self.average_score, average_score), tf.assign(self.n_games_played, n_games_played), self.epoch_stats])
+		_ , _, s =self.sess.run([tf.assign(self.average_score, average_score), tf.assign(self.n_games_played, n_games_played), self.summ_per_epoch])
 
 		self.writer.add_summary(s, epoch)

@@ -28,14 +28,14 @@ game.game_init()
 
 ### Hyperparameter settings
 epsilon = 0.9 #probability to play a random action
-frame_stacks = 4
+frame_stacks = 3
 games_to_play = 10000
 max_length_dataset = 1e6
 learning_rate = 0.00025
-replay_start_size = 50
+replay_start_size = 1000
 mini_batch_size = 16
-network_copy = 200
-epoch_length = 200
+network_copy = 1000
+epoch_length = 1000
 
 cnn = cnn_lib.Network(
 					width = width,
@@ -140,7 +140,6 @@ running_score_alpha = 0.01
 q_value_mean = 0.0
 q_value_alpha = 0.01
 
-loss_value = 0.0
 backprop_cycles = 0 
 
 #initialize tensorflow settings and variables
@@ -172,7 +171,7 @@ while running:
     		# Accumulate statistics
         	n_games_played, games_won, running_score_mean, q_value_mean = accumulate_stats(reward, n_games_played, games_won, running_score_mean, running_score_alpha, q_value_mean, q_value, q_value_alpha)
 
-        	loss_value, backprop_cycles = cnn.update_nn(dataset, mini_batch_size, loss_value, total_transition_count, replay_start_size)
+        	backprop_cycles = cnn.update_nn(dataset, mini_batch_size, total_transition_count, replay_start_size)
 
         	dataset, total_transition_count = repl_memory_append(dataset, state, action, reward, next_state, total_transition_count, max_length_dataset)
 
@@ -180,8 +179,8 @@ while running:
         	#if total_transition_count % 5 == 0:
         	#	cnn.tf_summary(total_transition_count)
 
-        	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
-        		loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
+        	#if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
+        		#loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
         		#cnn.model_save(total_transition_count)
 
         	if (backprop_cycles % network_copy == 0) and (backprop_cycles > 0):
@@ -191,8 +190,10 @@ while running:
         	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
         		cnn.accumulate_epoch_stats(games_won, n_games_played, epoch)
         		epoch += 1
-        		games_won = 1
-        		n_games_played = 1
+        		games_won = 0
+        		n_games_played = 0
+        		print('epoch {}: n_games_played : {} , games_won {}, average_score {}'.format(epoch, n_games_played, games_won, (games_won/n_games_played)))
+
 
 
 
