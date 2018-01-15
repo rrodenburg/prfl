@@ -1,0 +1,48 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf200
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\csgray\c0;\csgray\c100000;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww31160\viewh8400\viewkind0
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 no mods:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\pardirnatural\partightenfactor0
+
+\f1\fs22 \cf2 \cb3 \CocoaLigature0 action: 0.01541192048079484, state_accumulate: 0.043458137597951974, end_game_check: 3.3085639183814233e-06, update_nn : 0.03804130225510269, repl_memory_insert: 3.3113982651259875e-05, copy_network_weights: nan\
+epoch 2: epoch time 82.62136602401733, n_games_played 46 , games_won 12, average_score 0.2608695652173913\
+memory use: 0.4286918640136719\
+action: 0.05278966951370239, state_accumulate: 0.034871307849884035, end_game_check: 2.9187202453613283e-06, update_nn : 0.0738757758140564, repl_memory_insert: 2.5551795959472656e-05, copy_network_weights: 0.17796015739440918\
+epoch 3: epoch time 98.60923409461975, n_games_played 49 , games_won 12, average_score 0.24489795918367346\
+memory use: 0.46392822265625\
+action: 0.08096014785766602, state_accumulate: 0.03509868764877319, end_game_check: 2.9234886169433595e-06, update_nn : 0.07752286434173584, repl_memory_insert: 2.6071071624755858e-05, copy_network_weights: nan\
+memory use: 0.5460395812988281\
+action: 0.10987834787368775, state_accumulate: 0.03418741846084595, end_game_check: 2.6922225952148437e-06, update_nn : 0.07815221309661866, repl_memory_insert: 2.6660442352294923e-05, copy_network_weights: 0.2346658706665039\
+memory use: 0.5893936157226562\
+action: 0.15315126514434815, state_accumulate: 0.03733693361282349, end_game_check: 2.597332000732422e-06, update_nn : 0.08054213619232178, repl_memory_insert: 2.8464794158935547e-05, copy_network_weights: nan\
+memory use: 0.6643905639648438\
+action: 0.1687625422477722, state_accumulate: 0.0375755615234375, end_game_check: 2.6865005493164064e-06, update_nn : 0.08085632371902465, repl_memory_insert: 2.824544906616211e-05, copy_network_weights: 0.33872199058532715\
+memory use: 0.7157135009765625\
+action: 0.20589260816574095, state_accumulate: 0.038023778915405274, end_game_check: 2.6416778564453125e-06, update_nn : 0.08021314668655395, repl_memory_insert: 2.7420520782470704e-05, copy_network_weights: nan\
+memory use: 0.7872810363769531\
+action: 0.22785924100875854, state_accumulate: 0.03840908670425415, end_game_check: 3.3802986145019533e-06, update_nn : 0.08062591505050659, repl_memory_insert: 2.7524948120117186e-05, copy_network_weights: 0.3862299919128418\
+memory use: 0.8226661682128906\
+action: 0.27042270517349243, state_accumulate: 0.03784864044189453, end_game_check: 2.7341842651367187e-06, update_nn : 0.08092990875244141, repl_memory_insert: 2.719449996948242e-05, copy_network_weights: nan\
+memory use: 0.9085426330566406\
+action: 0.30232054138183595, state_accumulate: 0.037681010723114014, end_game_check: 2.7294158935546876e-06, update_nn : 0.08241367530822753, repl_memory_insert: 2.7670860290527344e-05, copy_network_weights: 0.4545581340789795\
+memory use: 0.9498329162597656\
+action: 0.3310228691101074, state_accumulate: 0.03759481334686279, end_game_check: 2.6412010192871092e-06, update_nn : 0.08212618350982666, repl_memory_insert: 2.8286933898925783e-05, copy_network_weights: nan\
+memory use: 1.0328712463378906\
+action: 0.37020626640319826, state_accumulate: 0.035372420787811276, end_game_check: 2.791404724121094e-06, update_nn : 0.08294175815582275, repl_memory_insert: 2.9067039489746093e-05, copy_network_weights: 0.47873902320861816\
+\
+# shut off update_nn, still linear increase. (tmp 6)\
+# shut off update_nn and copy network, still linear increase. (tmp 7)\
+# shut off update_nn and copy network and can.stats accumulate, still linear increase. (tmp 8)\
+# shut off action, update_nn and copy network and can.stats accumulate, no linear increase. (tmp 8)\
+# only copy network, no linear increase (tmp 10)\
+# copy network and update_nn, no linear increase (tmp 11)\
+# tmp 12, everything on\
+# tmp 13, action function on, but only np.random, still good, increase is due to nn picking action\
+# tmp 16, use pred network to pick action, no change\
+# tmp 17, commented tf.assing, still fast!\
+# tmp 18, added q_value = q_value[0], no good, changing name scope of the variable, still no good. \
+}

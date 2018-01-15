@@ -48,7 +48,7 @@ class Network(object):
 		#self.variables_t = tf.trainable_variables(scope = None)
 		self.variables_t = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_train')
 
-		self.average_score, self.n_games_played = self.stats_var_init()
+		self.average_score, self.n_games_played, self.epoch_time ,self.played_q_value = self.stats_var_init()
 		
 		self.summ_per_state = tf.summary.merge_all(key = 'per_state')
 		self.summ_per_epoch = tf.summary.merge_all(key = 'per_epoch')
@@ -84,11 +84,17 @@ class Network(object):
 		with tf.name_scope("epoch_stats"):
 			average_score = tf.Variable(0.0, 'average_score')
 			n_games_played = tf.Variable(0, 'n_games_played')
+			epoch_time = tf.Variable(0.0, 'epoch_time')
 
-		tf.summary.scalar("average score", average_score, collections = ['per_epoch'])
-		tf.summary.scalar("games played", n_games_played, collections = ['per_epoch'])
+		played_q_value = tf.Variable(-1.0, 'played_q_value')
 
-		return average_score, n_games_played
+		tf.summary.scalar("average score per epoch", average_score, collections = ['per_epoch'])
+		tf.summary.scalar("games played per epoch", n_games_played, collections = ['per_epoch'])
+		tf.summary.scalar("epoch_time (s)", epoch_time, collections = ['per_epoch'])
+
+		tf.summary.scalar("played q value", played_q_value, collections = ['per_state'])
+
+		return average_score, n_games_played, epoch_time, played_q_value
 
 	def tf_session_init(self):
 		
@@ -96,6 +102,7 @@ class Network(object):
 		### initialize training graph
 		self.sess = tf.Session()
 		self.sess.run(self.init)
+		#self.sess.graph.finalize() # make sure nothing else is added to graph
 
 		### initialize prediction graph
 		#self.sess_pred = tf.Session(graph = self.g_pred)
@@ -200,10 +207,10 @@ class Network(object):
 		return train_op, global_step
 
 
-	def mini_batch_sample(self, memory, mini_batch_size):
+	def mini_batch_sample(self, memory, mini_batch_size, total_transition_count):
 		#Select random mini-batch of 32 transitions
-		idx = np.random.randint(len(memory), size = mini_batch_size)
-		mini_batch = [memory[i] for i in idx]
+		idx = np.random.randint(total_transition_count)
+		mini_batch = memory[idx:idx+mini_batch_size]
 	
 		mini_batch_x = [x[0].astype('float32') for x in mini_batch]
 		mini_batch_y = [x[3].astype('float32') for x in mini_batch]
@@ -218,13 +225,14 @@ class Network(object):
 	def pick_greedy_action(self, frame_stack):
 		frame_stack = [[x.astype('float32') for x in frame_stack]]
 		action, q_value = self.sess.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
+		#action, q_value = self.sess.run([self.best_action_pred, self.max_Q_value_pred], feed_dict = {self.x_pred : frame_stack})
+		#q_value = q_value[0]
+		#self.sess.run(tf.assign(self.played_q_value, q_value))
 
-		tf.summary.scalar("max_Q_value", q_value[0], collections = ['per_state'])
-
-		return action[0], q_value[0]
+		return action[0]
 	
-	def backprop(self, memory, mini_batch_size):
-		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, mini_batch_size)
+	def backprop(self, memory, mini_batch_size, total_transition_count):
+		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, mini_batch_size, total_transition_count)
 		_, q_value = self.sess.run([self.best_action_pred, self.max_Q_value_pred], {self.x_pred: mini_batch_y})
 	
 		target_y = self.create_y(reward, q_value) # select reward as y if episode had ended
@@ -244,7 +252,7 @@ class Network(object):
 
 	def update_nn(self, dataset, mini_batch_size, total_transition_count, replay_start_size):
 		if total_transition_count > replay_start_size:
-			global_step = self.backprop(dataset, mini_batch_size)
+			global_step = self.backprop(dataset, mini_batch_size, total_transition_count)
 		else: # I dont know if this is a nice solution
 			global_step = 0
 		return global_step
@@ -259,9 +267,9 @@ class Network(object):
 	
 		return
 
-	def accumulate_epoch_stats(self, games_won, n_games_played, epoch):
-		average_score = games_won / n_games_played
+	def accumulate_epoch_stats(self, mean_score, n_games_played, time, epoch):
 		
-		_ , _, s =self.sess.run([tf.assign(self.average_score, average_score), tf.assign(self.n_games_played, n_games_played), self.summ_per_epoch])
+		self.sess.run([tf.assign(self.average_score, mean_score), tf.assign(self.n_games_played, n_games_played), tf.assign(self.epoch_time, time)])
+		s = self.sess.run(self.summ_per_epoch)
 
 		self.writer.add_summary(s, epoch)

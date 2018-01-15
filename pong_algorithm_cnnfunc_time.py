@@ -131,6 +131,10 @@ def memory():
     memoryUse = py.memory_info()[0]/2.**30  # memory use in GB...I think
     print('memory use:', memoryUse)
 
+
+
+
+
 ### initialize dataset
 dataset = []
 total_transition_count = 0
@@ -143,10 +147,23 @@ epoch = 0
 epoch_time = time.time()
 mean_score = 0
 
+#running_score_mean = 0.0
+#running_score_alpha = 0.01
+
+#q_value_mean = 0.0
+#q_value_alpha = 0.01
+
 backprop_cycles = 0 
 
 #initialize tensorflow settings and variables
 cnn.tf_session_init()
+
+action_t = []
+state_accumulate_t = []
+end_game_check_t = []
+update_nn_t = []
+repl_memory_insert_t = []
+copy_network_weights_t = []
 
 running = True
 while running: 
@@ -167,16 +184,32 @@ while running:
         #write an entry into the dataset, do backprop and print stats
         else:
 			## Pick action following greedy policy; 1 action per episode
+        	time_a = time.time() 
         	action = determine_action(state, epsilon, episode_state_count, total_transition_count, replay_start_size)
+        	time_a = time.time() - time_a
+        	action_t.append(time_a)
 
+        	time_a = time.time()
         	next_state, reward, episode_running = state_accumulate(action, frame_stacks, episode_running)
+        	time_a = time.time() - time_a
+        	state_accumulate_t.append(time_a)
 	
     		# Accumulate statistics
+        	time_a = time.time()
         	n_games_played, games_won = end_game_check(reward, n_games_played, games_won)
+        	time_a = time.time() - time_a
+        	end_game_check_t.append(time_a)
 
+        	time_a = time.time()
         	backprop_cycles = cnn.update_nn(dataset, mini_batch_size, total_transition_count, replay_start_size)
+        	#backprop_cycles += 1
+        	time_a = time.time() - time_a
+        	update_nn_t.append(time_a)
 
+        	time_a = time.time()
         	dataset, total_transition_count = repl_memory_insert(dataset, state, action, reward, next_state, total_transition_count, max_length_dataset)
+        	time_a = time.time() - time_a
+        	repl_memory_insert_t.append(time_a)
         	# display statistics
         	#if total_transition_count % 5 == 0:
         	#	cnn.tf_summary(total_transition_count)
@@ -186,7 +219,12 @@ while running:
         		#cnn.model_save(total_transition_count)
 
         	if (backprop_cycles % network_copy == 0) and (backprop_cycles > 0):
+        		time_a = time.time()
         		cnn.copy_network_weights()
+        		time_a = time.time() - time_a
+        		copy_network_weights_t.append(time_a)
+
+        		
 
         	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
         		epoch_time = time.time() - epoch_time
@@ -200,9 +238,30 @@ while running:
         		print('epoch {}: epoch time {}, n_games_played {} , games_won {}, average_score {}'.format(epoch, epoch_time, n_games_played, games_won, (games_won/n_games_played)))
         		memory()
 
+        		#print('action: {}, state_accumulate: {}, end_game_check: {}, update_nn : {}, repl_memory_insert: {}, copy_network_weights: {}'. format(
+        		#	np.mean(action_t),
+        		#	np.mean(state_accumulate_t),
+        		#	np.mean(end_game_check_t),
+        		#	np.mean(update_nn_t),
+        		#	np.mean(repl_memory_insert_t),
+        		#	np.mean(copy_network_weights_t),
+        		#	))
+
         		epoch_time = time.time()
         		games_won = 0
         		n_games_played = 0
+
+        		action_t = []
+        		state_accumulate_t = []
+        		end_game_check_t = []
+        		update_nn_t = []
+        		repl_memory_insert_t = []
+        		copy_network_weights_t = []
+        		
+
+
+
+
 
         episode_state_count += 1
         
