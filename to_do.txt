@@ -3,28 +3,25 @@ tensorboard --logdir 18 --host=127.0.0.1
 To do / check
 - DONE Create functions and lib for tensor flow network
 - DONE Implement tensorboard
-- Implement custom tensor board stats (https://stackoverflow.com/questions/40722413/how-to-use-several-summary-collections-in-tensorflow)
+- DONE Implement custom tensor board stats (https://stackoverflow.com/questions/40722413/how-to-use-several-summary-collections-in-tensorflow)
 	- Time per epoch
 	- Played Q value
 - Implement tensor board histograms
 - DONE Implement prediction network and weight copy-ing
 	- DONE create test code in ccn_test.py
 - Design custom cnn with batch normalisation layers
-- Create lib for reinf learning 
-- check if code get slower with more epochs
+- DONE Create lib for reinf learning 
+- DONE check if code get slower with more epochs
 	- DONE give dataset length to function, remove len()
 	- check if code is also slow with very small dataset length
 	- randomize dataset and select batch ranges
 	- issue most likely due to tensor flow, all tensor flow functions get slower over time (action picking, update nn, copy network)
+- decay epsilon over time
+- implement grid search code
 
 Add evaluation metric:
 - DONE avg game length per epoch
 - DONE avg score per epoch
-
-Network is exploding during training:
-- maybe due to recursiveness when creating y
-- maybe add batch normalization?
-- check learning rate
 
 Problems to solve:
 - NO PROBLEM some images miss a pad

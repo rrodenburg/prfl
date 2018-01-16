@@ -33,17 +33,8 @@ class Network(object):
 		self.network = network_name_dict[network_name]
 		self.trainer = trainer_name_dict[trainer_name]
 		self.logdir = logdir
-
-		while os.path.isdir(self.logdir) == True:
-			self.logdir = self.logdir[:-1] + str(int(self.logdir[-1]) + 1)
-			
-			#shutil.rmtree(self.logdir)
 		
-		print('dir exists :', os.path.isdir(self.logdir))
-		print('tensorboard data is saved in :', self.logdir)
-
 		### Initiate training and action picking graph
-		
 		
 		self.x_t, self.y, self.a = self.network_param_init()
 		self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t, '_train')
@@ -109,10 +100,10 @@ class Network(object):
 		self.writer = tf.summary.FileWriter(self.logdir)
 		self.writer.add_graph(self.sess.graph)
 
-	def model_save(self, epoch):
-		model = 'model_epoch_'
+	def model_save(self, global_step):
+		model = 'model'
 
-		self.saver.save(self.sess, os.path.join(self.logdir, model), epoch)
+		self.saver.save(self.sess, os.path.join(self.logdir, model), global_step = global_step, write_meta_graph=False, write_state=False)
 
 	def nature_cnn(self, x_input, name):
 

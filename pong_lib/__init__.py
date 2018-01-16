@@ -20,7 +20,8 @@ class Pong(object):
                 pad_velocity = 8, 
                 pad_velocity_ai = 1,
                 DistPadWall = 20,
-                ball_velocity = 1
+                ball_velocity = 1,
+                speed_increase = 0.2
                 ):
                 
         self.number_of_players = number_of_players
@@ -33,11 +34,13 @@ class Pong(object):
         self.pad_velocity_ai = pad_velocity_ai
         self.DistPadWall = DistPadWall
         self.ball_velocity = ball_velocity
+        self.speed_increase = speed_increase
         
         #canvas declaration
         self.window = pygame.display.set_mode((self.width , self.heigth))
         
         #initialize variables for game
+        
         self.score = [0,0]
         self.padL_vel = 0 #y-velocity of left pad
         self.padR_vel = 0 #y-velocity of right pad
@@ -46,10 +49,12 @@ class Pong(object):
         
     def initialize_ball_pad_positions(self):
         #initialize ball position and velocity
+
+        self.ball_pad_interactions = 0 # keep track of number of times the ball hits the pad, such that ball speed can be increased.
         
-        self.velinit_list = list(range(3,5)) + list(range(-4,-2))
+        self.velinit_list = list(range(3,4)) + list(range(-3,-2))
         self.ball_pos = np.array([self.width / 2 - self.ball_radius, self.heigth / 2 - self.ball_radius])
-        self.ball_vel = self.ball_velocity* np.array([random.choice(self.velinit_list),random.choice(self.velinit_list)])
+        self.ball_vel = self.ball_velocity * np.array([random.choice(self.velinit_list),random.choice(self.velinit_list)])
         
         self.padL_pos= np.array([self.DistPadWall, self.heigth/ 2 - self.pad_heigth / 2]) #these positions denote the upperleft corner of the pad; (0,0) is UL corner of screen
         self.padR_pos= np.array([self.width - self.DistPadWall - self.pad_width, self.heigth / 2 - self.pad_heigth / 2])
@@ -98,7 +103,7 @@ class Pong(object):
         else:
             return currentypos
             
-    def updateball_pos(self, velocity,currentpos,_padL_pos,_padR_pos): #returns new ball position; 
+    def updateball_pos(self, velocity, currentpos,_padL_pos,_padR_pos): #returns new ball position; 
     #the velocity-input of this function is the old velocity; we'll update it to the new velocity if necessary, namely in case of:
         #collision with upper wall or lower wall:
         if (currentpos[1] + velocity[1]) <= 0 or (currentpos[1] + 2 * self.ball_radius) >= self.heigth:        
@@ -107,11 +112,15 @@ class Pong(object):
         if ((currentpos[0] + velocity[0]) <= (_padL_pos[0] + self.pad_width)                        #x-coordinates of collision condition
         and (_padL_pos[1] + self.pad_heigth - 2 * self.ball_radius) >= currentpos[1] >= _padL_pos[1]): #y-coordinates of collision conditionv
             velocity[0] = abs(velocity[0])
+            self.ball_pad_interactions += 1
+
         #collision wit R pad
         if (((currentpos[0] + velocity[0] + 2 * self.ball_radius)  >= _padR_pos[0])              #x-coordinates of collision condition
         and (_padR_pos[1] + self.pad_heigth - 2 * self.ball_radius) >= currentpos[1] >= _padR_pos[1]):  #y-coordinates of collision conditionv
             velocity[0] = -(abs(velocity[0]))
-        newposition = currentpos + velocity
+            self.ball_pad_interactions += 1
+
+        newposition = currentpos + velocity * (1 + self.ball_pad_interactions * self.speed_increase)# + self.ball_pad_interactions / 2) # Add extra speed to the ball based on the game length
         return (velocity,newposition)
         
     def wincheck(self, ball_position, ball_velocity, score): #Check if player wins
