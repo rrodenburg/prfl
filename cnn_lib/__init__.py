@@ -13,10 +13,15 @@ class Network(object):
 				learning_rate = 0.00025,
 				mini_batch_size = 16,
 				network_name = 'nature_cnn',
-				logdir = './tmp/1'
+				trainer_name = 'rms_prop',
+				logdir = '../tmp/1'
 				):
 
 		network_name_dict = {'nature_cnn' : self.nature_cnn}
+
+		trainer_name_dict = {
+						'rms_prop' : self.train_rms_prop,
+						'adam' : self.train_ADAM}
 
 		tf.reset_default_graph()
 
@@ -26,6 +31,7 @@ class Network(object):
 		self.learning_rate = learning_rate
 		self.mini_batch_size = mini_batch_size
 		self.network = network_name_dict[network_name]
+		self.trainer = trainer_name_dict[trainer_name]
 		self.logdir = logdir
 
 		while os.path.isdir(self.logdir) == True:
@@ -42,32 +48,26 @@ class Network(object):
 		self.x_t, self.y, self.a = self.network_param_init()
 		self.output, self.best_action, self.max_Q_value_t = self.network(self.x_t, '_train')
 		self.loss = self.loss_func()
-		self.train_op, self.global_step = self.train()
+		self.train_op, self.global_step = self.trainer()
 
-		
-		#self.variables_t = tf.trainable_variables(scope = None)
+		# Select all variables from training network
 		self.variables_t = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_train')
 
-		self.average_score, self.n_games_played, self.epoch_time ,self.played_q_value = self.stats_var_init()
+		# Initate variables to keep statistics and tf summaries 
+		self.average_score, self.n_games_played, self.epoch_time = self.stats_var_init()
 		
 		self.summ_per_state = tf.summary.merge_all(key = 'per_state')
 		self.summ_per_epoch = tf.summary.merge_all(key = 'per_epoch')
-
-		#([self.loss_sum])
-		#self.summ_loss = tf.summary.merge([self.loss_sum, self.image_summ])
-		#self.epoch_stats = tf.summary.merge([self.avg_score_summ, self.n_games_played_summ])
-		#self.epoch_stats = tf.summary.merge(['average_score'])
 
 		### Initiate graph to generate y as backprop target
 
 		self.x_pred, _, _ = self.network_param_init()
 		_, self.best_action_pred, self.max_Q_value_pred = self.network(self.x_pred, '_predict')
 
-		#self.init_pred = tf.global_variables_initializer()
+		# Select all variables from target network
 		self.variables_pred = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = 'network_predict')
-		#self.summ_pred = tf.summary.merge_all()
 
-		### Initialize variables
+		### Variable inititializer
 		self.init = tf.global_variables_initializer()
 
 	def network_param_init(self):
@@ -86,42 +86,33 @@ class Network(object):
 			n_games_played = tf.Variable(0, 'n_games_played')
 			epoch_time = tf.Variable(0.0, 'epoch_time')
 
-		played_q_value = tf.Variable(-1.0, 'played_q_value')
+		#played_q_value = tf.Variable(-1.0, 'played_q_value')
 
 		tf.summary.scalar("average score per epoch", average_score, collections = ['per_epoch'])
 		tf.summary.scalar("games played per epoch", n_games_played, collections = ['per_epoch'])
 		tf.summary.scalar("epoch_time (s)", epoch_time, collections = ['per_epoch'])
 
-		tf.summary.scalar("played q value", played_q_value, collections = ['per_state'])
+		#tf.summary.scalar("played q value", played_q_value, collections = ['per_state'])
 
-		return average_score, n_games_played, epoch_time, played_q_value
+		return average_score, n_games_played, epoch_time
 
 	def tf_session_init(self):
 		
-		#tf.reset_default_graph()
-		### initialize training graph
-		self.sess = tf.Session()
-		self.sess.run(self.init)
-		#self.sess.graph.finalize() # make sure nothing else is added to graph
+		self.saver = tf.train.Saver()
 
-		### initialize prediction graph
-		#self.sess_pred = tf.Session(graph = self.g_pred)
-		#self.sess_pred.run(self.init_pred)
+		### initialize tensorflow session
+		self.sess = tf.Session()
+		self.sess.run(self.init) #initialize all variables
 
 		### initialize tensorboard
-		#self.saver = tf.train.Saver()
+		
 		self.writer = tf.summary.FileWriter(self.logdir)
 		self.writer.add_graph(self.sess.graph)
-		#self.writer.add_graph(self.sess_pred.graph)
 
-	#def tf_summary(self, iteration):
-#
-	#	self.sess.run(self.summ)
-	#	self.writer.add_summary(s, iteration)
+	def model_save(self, epoch):
+		model = 'model_epoch_'
 
-	def model_save(self, iteration):
-
-		self.saver(self.sess, os.path.join(self.logdir, 'model.ckpt'), iteration)
+		self.saver.save(self.sess, os.path.join(self.logdir, model), epoch)
 
 	def nature_cnn(self, x_input, name):
 
@@ -194,7 +185,7 @@ class Network(object):
 
 		return loss
 
-	def train(self):
+	def train_rms_prop(self):
 
 		with tf.name_scope("train"):
 			optimizer = tf.train.RMSPropOptimizer(learning_rate = self.learning_rate, momentum = 0.95, epsilon = 0.01)
@@ -206,11 +197,26 @@ class Network(object):
 
 		return train_op, global_step
 
+	def train_ADAM(self):
+
+		with tf.name_scope("train"):
+			optimizer = tf.train.AdamOptimizer(learning_rate = self.learning_rate, beta1 = 0.9, beta2 = 0.999, epsilon = 1e-08)
+		
+			global_step = tf.Variable(0, name='global_step', trainable=False)
+			train_op = optimizer.minimize(
+	    	        loss = self.loss,
+	    	        global_step=global_step)
+
+		return train_op, global_step
+
 
 	def mini_batch_sample(self, memory, mini_batch_size, total_transition_count):
 		#Select random mini-batch of 32 transitions
-		idx = np.random.randint(total_transition_count)
-		mini_batch = memory[idx:idx+mini_batch_size]
+		#idx = np.random.randint(total_transition_count)
+		#mini_batch = memory[idx:idx+mini_batch_size]
+
+		idx = np.random.randint(total_transition_count, size = mini_batch_size)
+		mini_batch = [memory[i] for i in idx]
 	
 		mini_batch_x = [x[0].astype('float32') for x in mini_batch]
 		mini_batch_y = [x[3].astype('float32') for x in mini_batch]
@@ -225,9 +231,6 @@ class Network(object):
 	def pick_greedy_action(self, frame_stack):
 		frame_stack = [[x.astype('float32') for x in frame_stack]]
 		action, q_value = self.sess.run([self.best_action, self.max_Q_value_t], feed_dict = {self.x_t : frame_stack})
-		#action, q_value = self.sess.run([self.best_action_pred, self.max_Q_value_pred], feed_dict = {self.x_pred : frame_stack})
-		#q_value = q_value[0]
-		#self.sess.run(tf.assign(self.played_q_value, q_value))
 
 		return action[0]
 	
@@ -244,7 +247,6 @@ class Network(object):
 						}
 	
 		_, global_step, s = self.sess.run([self.train_op, self.global_step, self.summ_per_state], feed_dict = feed_dict_train)
-		#_, loss_value, global_step = self.sess_t.run([self.train_op, self.loss, self.global_step], feed_dict = feed_dict_train)
 
 		self.writer.add_summary(s, global_step)
 	
@@ -258,12 +260,9 @@ class Network(object):
 		return global_step
 
 	def copy_network_weights(self):
-		w_to_copy = self.sess.run(self.variables_t)
-		#w_assign_to = self.sess.run(self.variables_pred)
+		w_to_copy = self.sess.run(self.variables_t) # extract weights from training network
 		
-		self.sess.run([tf.assign(self.variables_pred[i], w_to_copy[i]) for i in range(len(w_to_copy))])
-		#for i in range(len(w_to_copy)):
-		#	self.sess.run(tf.assign(self.variables_pred[i], w_to_copy[i]))
+		self.sess.run([tf.assign(self.variables_pred[i], w_to_copy[i]) for i in range(len(w_to_copy))]) # Copy weights to target netwerk per layer
 	
 		return
 

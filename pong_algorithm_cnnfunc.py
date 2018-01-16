@@ -14,19 +14,6 @@ import time
 width = 84
 heigth = 84
 
-game = pong_lib.Pong( 
-                number_of_players = 1, 
-                width = width, 
-                heigth = heigth, 
-                ball_radius = 2, 
-                pad_width = 4, 
-                pad_heigth = 14, 
-                pad_velocity = 8, 
-                pad_velocity_ai = 2,
-                DistPadWall = 4,
-                ball_velocity = 0.7)
-game.game_init()
-
 ### Hyperparameter settings
 epsilon = 0.9 #probability to play a random action
 frame_stacks = 3
@@ -37,15 +24,6 @@ replay_start_size = 500
 mini_batch_size = 16
 network_copy = 1000
 epoch_length = 500
-
-cnn = cnn_lib.Network(
-					width = width,
-					heigth = heigth,
-					frame_stacks = frame_stacks,
-					learning_rate = learning_rate,
-					mini_batch_size = mini_batch_size,
-					network_name = 'nature_cnn'
-					)
 
 def add_frame(state_list, frame_count):
 	#observe state
@@ -98,9 +76,10 @@ def state_accumulate(action, frame_stacks, episode_running):
 	return next_state, reward, episode_running
 
 def repl_memory_insert(dataset, state, action, reward, next_state, total_transition_count, max_length_dataset):
-	idx = np.random.randint(0, total_transition_count+1)
+	#idx = np.random.randint(0, total_transition_count+1)
 
-	dataset.insert(idx, (state, action, reward, next_state)) # insert at random position for faster sampling
+	#dataset.insert(idx, (state, action, reward, next_state)) # insert at random position for faster sampling
+	dataset.append((state, action, reward, next_state))
 
 	total_transition_count += 1
 	if total_transition_count > max_length_dataset:
@@ -116,34 +95,75 @@ def display_stats(backprop_cycles, n_games_played, games_won, loss_value, runnin
 def end_game_check(reward, n_games_played, games_won):
 	if reward != 0:
 		n_games_played += 1
-		#running_score_mean = rolling_avg(running_score_mean, reward, running_score_alpha)
 	if reward == 1:
 		games_won += 1
-	#if q_value is not None:
-	#	q_value_mean = rolling_avg(q_value_mean, q_value, q_value_alpha)
 	return n_games_played, games_won
 
-def memory():
-    import os
-    import psutil
-    pid = os.getpid()
-    py = psutil.Process(pid)
-    memoryUse = py.memory_info()[0]/2.**30  # memory use in GB...I think
-    print('memory use:', memoryUse)
+def epoch_end(epoch, epoch_time, mean_score, games_won, n_games_played):
+	epoch_time = time.time() - epoch_time
 
-### initialize dataset
-dataset = []
-total_transition_count = 0
+	if n_games_played > 0:
+		mean_score = games_won / n_games_played
 
-n_games_played = 0
-games_won = 0 
+	cnn.accumulate_epoch_stats(mean_score, n_games_played, epoch_time, epoch)
+	epoch += 1
 
-# stats initialization
-epoch = 0
-epoch_time = time.time()
-mean_score = 0
+	print('epoch {}: epoch time {}, n_games_played {} , games_won {}, average_score {}'.format(epoch, epoch_time, n_games_played, games_won, mean_score))
 
-backprop_cycles = 0 
+	# Reset stats
+	epoch_time = time.time()
+	games_won = 0
+	n_games_played = 0
+
+	return epoch, epoch_time, mean_score, games_won, n_games_played
+
+def rf_initialization():
+	### initialize dataset
+	dataset = []
+	total_transition_count = 0
+	
+	# stats initialization
+	n_games_played = 0
+	games_won = 0
+	mean_score = 0
+	
+	epoch = 0
+	epoch_time = time.time()
+	
+	backprop_cycles = 0 
+
+	return dataset, total_transition_count, n_games_played, games_won, mean_score, epoch, epoch_time, backprop_cycles
+
+#### Initialize Pong
+game = pong_lib.Pong( 
+                number_of_players = 1, 
+                width = width, 
+                heigth = heigth, 
+                ball_radius = 2, 
+                pad_width = 4, 
+                pad_heigth = 14, 
+                pad_velocity = 8, 
+                pad_velocity_ai = 2,
+                DistPadWall = 4,
+                ball_velocity = 0.7)
+game.game_init()
+
+#### Initialize tensorflow graph
+cnn = cnn_lib.Network(
+					width = width,
+					heigth = heigth,
+					frame_stacks = frame_stacks,
+					learning_rate = learning_rate,
+					mini_batch_size = mini_batch_size,
+					network_name = 'nature_cnn',
+					trainer_name = 'adam'
+					)
+
+######### START RF LEARNING LOOP ######
+
+# Initialize reninforcement learning dataset, and stats.
+
+dataset, total_transition_count, n_games_played, games_won, mean_score, epoch, epoch_time, backprop_cycles = rf_initialization()
 
 #initialize tensorflow settings and variables
 cnn.tf_session_init()
@@ -177,32 +197,18 @@ while running:
         	backprop_cycles = cnn.update_nn(dataset, mini_batch_size, total_transition_count, replay_start_size)
 
         	dataset, total_transition_count = repl_memory_insert(dataset, state, action, reward, next_state, total_transition_count, max_length_dataset)
-        	# display statistics
-        	#if total_transition_count % 5 == 0:
-        	#	cnn.tf_summary(total_transition_count)
 
-        	#if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
-        		#loss_value = display_stats(backprop_cycles, n_games_played, games_won, loss_value, running_score_mean, q_value_mean)
-        		#cnn.model_save(total_transition_count)
 
         	if (backprop_cycles % network_copy == 0) and (backprop_cycles > 0):
         		cnn.copy_network_weights()
 
         	if (backprop_cycles % epoch_length == 0) and (backprop_cycles > 0):
-        		epoch_time = time.time() - epoch_time
+        		#Calculate states, send stats to tensorboard and print stats in terminal
+        		epoch, epoch_time, mean_score, games_won, n_games_played = epoch_end(epoch, epoch_time, mean_score, games_won, n_games_played)
 
-        		if n_games_played > 0:
-        			mean_score = games_won / n_games_played
-
-        		cnn.accumulate_epoch_stats(mean_score, n_games_played, epoch_time, epoch)
-        		epoch += 1
-
-        		print('epoch {}: epoch time {}, n_games_played {} , games_won {}, average_score {}'.format(epoch, epoch_time, n_games_played, games_won, (games_won/n_games_played)))
-        		memory()
-
-        		epoch_time = time.time()
-        		games_won = 0
-        		n_games_played = 0
+        	if (backprop_cycles % (epoch_length*20) == 0) and (backprop_cycles > 0):
+        		# Save learned variables to disk
+        		cnn.model_save(epoch)
 
         episode_state_count += 1
         
