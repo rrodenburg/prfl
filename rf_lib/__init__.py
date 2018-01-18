@@ -5,17 +5,57 @@ import time
 import numpy as np
 import pygame
 import random
+import os
+
+def make_logdir(logdir):
+	subfolder = 1
+	logfolder = logdir + str(subfolder)
+	while os.path.isdir(logfolder) == True:
+		subfolder += 1
+		logfolder = logdir + str(subfolder)
+	
+	if not os.path.exists(logfolder):
+	    os.makedirs(logfolder)
+	
+	print('Data is saved in :', logfolder)
+
+	return logfolder
+
+def write_settings_logfile(logfolder, network_name, trainer_name, frame_stacks, max_epochs, max_length_dataset, learning_rate, replay_start_size, mini_batch_size, network_copy, epoch_length, epsilon, epsilon_decay):
+
+	parameter_list = [
+					'network_name : {}'.format(network_name),
+					'trainer_name : {}'.format(trainer_name),
+					'frame_stacks : {}'.format(frame_stacks),
+					'max epochs : {}'.format(max_epochs),
+					'max_length_dataset : {}'.format(max_length_dataset),
+					'learning_rate : {}'.format(learning_rate),
+					'replay_start_size : {}'.format(replay_start_size),
+					'mini_batch_size : {}'.format(mini_batch_size),
+					'network_copy : {}'.format(network_copy),
+					'epoch_length : {}'.format(epoch_length),
+					'epsilon : {}'.format(epsilon),
+					'decay epsilon over x backprop cycles : {}'.format(epsilon_decay)
+					]
+	
+	# write file in log directory
+	with open(logfolder + '/settings.txt', 'w+') as f:
+		[f.write(i + '\n') for i in parameter_list]
+
+	return
 
 class RF(object):
 
 	def __init__(
 				self,
 				epsilon = 0.9,
+				epsilon_decay = 40000,
 				cnn = None,
 				game = None
 				):
 
 		self.epsilon = epsilon
+		self.epsilon_decay = epsilon_decay
 		self.cnn = cnn
 		self.game = game
 		
@@ -36,8 +76,6 @@ class RF(object):
 		backprop_cycles = 0 
 	
 		return dataset, total_transition_count, n_games_played, games_won, mean_score, epoch, epoch_time, backprop_cycles
-
-
 	
 	def add_frame(self, state_list, frame_count):
 		#observe state
@@ -46,8 +84,9 @@ class RF(object):
 		state_list[frame_count] = frame.astype('int8') #save as int8 to reduce memory usage
 		return state_list
 	
-	def determine_action(self, state, episode_state_count, total_transition_count, replay_start_size):
-		if total_transition_count > replay_start_size and self.epsilon > random.uniform(0, 1) and episode_state_count > 0:
+	def determine_action(self, state, episode_state_count, total_transition_count, replay_start_size, backprop_cycles):
+		current_epsilon = (self.epsilon + (1 - self.epsilon) * (min(1,backprop_cycles / self.epsilon_decay)))
+		if total_transition_count > replay_start_size and  current_epsilon > random.uniform(0, 1) and episode_state_count > 0:
 			action= self.cnn.pick_greedy_action(state) ## Let model pick next action to play, 0 = stay, 1 = up, 2 = down
 		else:
 		    action = np.random.randint(3) ## Play random action

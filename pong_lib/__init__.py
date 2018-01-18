@@ -247,4 +247,8 @@ class Pong(object):
         pygame.display.update()
         self.fps.tick(frames_per_sec)
         return reward
+
+    def kill_game(self):
+        pygame.quit()
+        sys.exit()
             

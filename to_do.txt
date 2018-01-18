@@ -18,6 +18,7 @@ To do / check
 	- issue most likely due to tensor flow, all tensor flow functions get slower over time (action picking, update nn, copy network)
 - decay epsilon over time
 - implement grid search code
+- check for library if functions should belong to classes or not
 
 Add evaluation metric:
 - DONE avg game length per epoch
