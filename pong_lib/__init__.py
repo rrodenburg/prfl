@@ -250,5 +250,5 @@ class Pong(object):
 
     def kill_game(self):
         pygame.quit()
-        sys.exit()
+        #sys.exit()
             

@@ -21,26 +21,12 @@ def make_logdir(logdir):
 
 	return logfolder
 
-def write_settings_logfile(logfolder, network_name, trainer_name, frame_stacks, max_epochs, max_length_dataset, learning_rate, replay_start_size, mini_batch_size, network_copy, epoch_length, epsilon, epsilon_decay):
-
-	parameter_list = [
-					'network_name : {}'.format(network_name),
-					'trainer_name : {}'.format(trainer_name),
-					'frame_stacks : {}'.format(frame_stacks),
-					'max epochs : {}'.format(max_epochs),
-					'max_length_dataset : {}'.format(max_length_dataset),
-					'learning_rate : {}'.format(learning_rate),
-					'replay_start_size : {}'.format(replay_start_size),
-					'mini_batch_size : {}'.format(mini_batch_size),
-					'network_copy : {}'.format(network_copy),
-					'epoch_length : {}'.format(epoch_length),
-					'epsilon : {}'.format(epsilon),
-					'decay epsilon over x backprop cycles : {}'.format(epsilon_decay)
-					]
+def write_settings_logfile(logfolder, x):
 	
 	# write file in log directory
 	with open(logfolder + '/settings.txt', 'w+') as f:
-		[f.write(i + '\n') for i in parameter_list]
+		for key, val in x.items():
+			f.write(key + ':' + str(val) + '\n')
 
 	return
 
@@ -50,12 +36,14 @@ class RF(object):
 				self,
 				epsilon = 0.9,
 				epsilon_decay = 40000,
+				frame_stacks = 4,
 				cnn = None,
 				game = None
 				):
 
 		self.epsilon = epsilon
 		self.epsilon_decay = epsilon_decay
+		self.frame_stacks = frame_stacks
 		self.cnn = cnn
 		self.game = game
 		
@@ -85,18 +73,23 @@ class RF(object):
 		return state_list
 	
 	def determine_action(self, state, episode_state_count, total_transition_count, replay_start_size, backprop_cycles):
-		current_epsilon = (self.epsilon + (1 - self.epsilon) * (min(1,backprop_cycles / self.epsilon_decay)))
+		
+		if self.epsilon_decay == 0:
+			current_epsilon = self.epsilon
+		else:
+			current_epsilon = (self.epsilon + (1 - self.epsilon) * (min(1,backprop_cycles / self.epsilon_decay)))
+
 		if total_transition_count > replay_start_size and  current_epsilon > random.uniform(0, 1) and episode_state_count > 0:
 			action= self.cnn.pick_greedy_action(state) ## Let model pick next action to play, 0 = stay, 1 = up, 2 = down
 		else:
 		    action = np.random.randint(3) ## Play random action
 		return action
 	
-	def state_accumulate(self, action, frame_stacks, episode_running):
+	def state_accumulate(self, action, episode_running):
 		frame_accumulation = True
 		frame_count = 0
 	
-		next_state = np.empty([frame_stacks,84,84], dtype = 'int8') #initialize array to save frames
+		next_state = np.empty([self.frame_stacks,84,84], dtype = 'int8') #initialize array to save frames
 		
 		reward = 0 # initialize reward
 		while frame_accumulation == True:
@@ -108,13 +101,13 @@ class RF(object):
 		    if reward != 0:
 		        frame_accumulation = False
 		        episode_running = False #if game ends, start a new game
-		        next_state = np.empty([84,84,frame_stacks], dtype = 'int8') # Return empty array of correct shape such that tensorflow can process it
+		        next_state = np.empty([84,84,self.frame_stacks], dtype = 'int8') # Return empty array of correct shape such that tensorflow can process it
 		        return next_state, reward, episode_running
 		    
 		    #observe state
 		    next_state = self.add_frame(next_state, frame_count)
 		    
-		    if frame_count == (frame_stacks - 1):
+		    if frame_count == (self.frame_stacks - 1):
 		        frame_count = 0
 		        frame_accumulation = False
 		    

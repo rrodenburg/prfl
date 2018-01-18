@@ -225,8 +225,8 @@ class Network(object):
 
 		return action[0]
 	
-	def backprop(self, memory, mini_batch_size, total_transition_count):
-		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, mini_batch_size, total_transition_count)
+	def backprop(self, memory, total_transition_count):
+		mini_batch_x, mini_batch_y, mini_batch_action, reward = self.mini_batch_sample(memory, self.mini_batch_size, total_transition_count)
 		_, q_value = self.sess.run([self.best_action_pred, self.max_Q_value_pred], {self.x_pred: mini_batch_y})
 	
 		target_y = self.create_y(reward, q_value) # select reward as y if episode had ended
@@ -243,9 +243,9 @@ class Network(object):
 	
 		return global_step
 
-	def update_nn(self, dataset, mini_batch_size, total_transition_count, replay_start_size):
+	def update_nn(self, dataset, total_transition_count, replay_start_size):
 		if total_transition_count > replay_start_size:
-			global_step = self.backprop(dataset, mini_batch_size, total_transition_count)
+			global_step = self.backprop(dataset, total_transition_count)
 		else: # I dont know if this is a nice solution
 			global_step = 0
 		return global_step

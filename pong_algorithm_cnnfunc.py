@@ -1,7 +1,6 @@
 import pong_lib
 import cnn_lib
 import rf_lib
-import pygame
 
 logdir = '../tmp1/'
 
@@ -17,13 +16,13 @@ trainer_name = 'adam'
 epsilon = 0.9 #probability to play a random action
 epsilon_decay = 500000
 frame_stacks = 3
-max_epochs = 1
+max_epochs = 400
 max_length_dataset = 1e6
 learning_rate = 0.00025
 replay_start_size = 500
 mini_batch_size = 16
 network_copy = 1000
-epoch_length = 50
+epoch_length = 500
 
 #### Create logfolder and write settings file
 logfolder = rf_lib.make_logdir(logdir)
@@ -57,10 +56,11 @@ cnn = cnn_lib.Network(
 
 #### Initiazlize rf library using initialized network and game
 rf = rf_lib.RF(
-				epsilon = epsilon ,
+				epsilon = epsilon,
+				frame_stacks = frame_stacks,
+				epsilon_decay = epsilon_decay,
 				cnn = cnn,
-				game = game,
-				epsilon_decay = epsilon_decay
+				game = game
 				)
 
 
