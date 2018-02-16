@@ -16,9 +16,12 @@ To do / check
 	- check if code is also slow with very small dataset length
 	- randomize dataset and select batch ranges
 	- issue most likely due to tensor flow, all tensor flow functions get slower over time (action picking, update nn, copy network)
-- decay epsilon over time
-- implement grid search code
+- DONE decay epsilon over time
+- DONE implement grid search code
+- implement lambda for reward decay
 - check for library if functions should belong to classes or not
+- create dataset length variable to use for sampling from dataset
+- copy network to opponent
 
 Add evaluation metric:
 - DONE avg game length per epoch
@@ -27,26 +30,18 @@ Add evaluation metric:
 Problems to solve:
 - NO PROBLEM some images miss a pad
 
-Pong settings (quick training):
-number_of_players = 1,
-width = width, 
-heigth = heigth, 
-ball_radius = 2, 
-pad_width = 4, 
-pad_heigth = 14, 
-pad_velocity = 8, 
-pad_velocity_ai = 4,
-DistPadWall = 4,
-ball_velocity = 1.5)
-
-(slow training, but able to catch first ball, exploding):
-number_of_players = 1
-width = width, 
-heigth = heigth, 
-ball_radius = 2, 
-pad_width = 4, 
-pad_heigth = 14, 
-pad_velocity = 8, 
-pad_velocity_ai = 2,
-DistPadWall = 4,
-ball_velocity = 0.7)
+solved pong
+game = pong_lib.Pong( 
+                    number_of_players = 1, 
+                    width = width, 
+                    heigth = heigth, 
+                    ball_radius = 2, 
+                    pad_width = 4, 
+                    pad_heigth = 14, 
+                    pad_velocity = 8, 
+                    pad_velocity_ai = 4,
+                    DistPadWall = 4,
+                    ball_velocity = 0.7,
+                    speed_increase = 0.2,
+                    gui = x['gui']
+                    )

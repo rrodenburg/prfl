@@ -38,7 +38,8 @@ class RF(object):
 				epsilon_decay = 40000,
 				frame_stacks = 4,
 				cnn = None,
-				game = None
+				game = None,
+				gui = False
 				):
 
 		self.epsilon = epsilon
@@ -46,6 +47,7 @@ class RF(object):
 		self.frame_stacks = frame_stacks
 		self.cnn = cnn
 		self.game = game
+		self.gui = gui
 		
 
 	def rf_initialization(self):
@@ -96,7 +98,12 @@ class RF(object):
 		    
 		    #observe reward
 		    if reward == 0: # does not allow to obtain a reward of +2 or -2 if game termination does not occur instantly
-		        reward += self.game.game_loop_action_input(action)
+		    	if self.gui == True:
+		        	reward += self.game.game_loop_action_input(action)
+		    	else:
+		    		reward_temp, next_state[frame_count] = self.game.game_loop_action_input_np(action)
+		    		reward += reward_temp
+
 		        
 		    if reward != 0:
 		        frame_accumulation = False
@@ -105,7 +112,8 @@ class RF(object):
 		        return next_state, reward, episode_running
 		    
 		    #observe state
-		    next_state = self.add_frame(next_state, frame_count)
+		    if self.gui == True:
+		    	next_state = self.add_frame(next_state, frame_count)
 		    
 		    if frame_count == (self.frame_stacks - 1):
 		        frame_count = 0
@@ -115,11 +123,40 @@ class RF(object):
 	
 		next_state = np.transpose(next_state,(1,2,0)) #transpose matrix to get it in suitable shape for tensorflow
 		return next_state, reward, episode_running
+
+	#def state_accumulate_np(self, action, episode_running):
+	#	frame_accumulation = True
+	#	frame_count = 0
+	#
+	#	next_state = np.empty([self.frame_stacks,84,84], dtype = 'int8') #initialize array to save frames
+	#	
+	#	reward = 0 # initialize reward
+	#	while frame_accumulation == True:
+	#	    
+	#	    #observe reward and state
+	#	    if reward == 0: # does not allow to obtain a reward of +2 or -2 if game termination does not occur instantly
+	#	        reward_temp, next_state[frame_count] = self.game.game_loop_action_input_np(action)
+	#	        reward += reward_temp
+	#	        
+	#	    if reward != 0:
+	#	        frame_accumulation = False
+	#	        episode_running = False #if game ends, start a new game
+	#	        next_state = np.empty([84,84,self.frame_stacks], dtype = 'int8') # Return empty array of correct shape such that tensorflow can process it
+	#	        return next_state, reward, episode_running
+	#	    
+	#	    #observe state
+	#	    #next_state = self.add_frame(next_state, frame_count)
+	#	    
+	#	    if frame_count == (self.frame_stacks - 1):
+	#	        frame_count = 0
+	#	        frame_accumulation = False
+	#	    
+	#	    frame_count += 1
+	#
+	#	next_state = np.transpose(next_state,(1,2,0)) #transpose matrix to get it in suitable shape for tensorflow
+	#	return next_state, reward, episode_running
 	
 	def repl_memory_insert(self, dataset, state, action, reward, next_state, total_transition_count, max_length_dataset):
-		#idx = np.random.randint(0, total_transition_count+1)
-	
-		#dataset.insert(idx, (state, action, reward, next_state)) # insert at random position for faster sampling
 		dataset.append((state, action, reward, next_state))
 	
 		total_transition_count += 1

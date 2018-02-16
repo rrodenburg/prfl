@@ -22,7 +22,7 @@ class Pong(object):
                 DistPadWall = 20,
                 ball_velocity = 1,
                 speed_increase = 0.2,
-                gui = False
+                #gui = False
                 ):
                 
         self.number_of_players = number_of_players
@@ -36,11 +36,13 @@ class Pong(object):
         self.DistPadWall = DistPadWall
         self.ball_velocity = ball_velocity
         self.speed_increase = speed_increase
-        self.gui = gui
+        self.gui = True
         
         #canvas declaration
-        if self.gui == True:
-            self.window = pygame.display.set_mode((self.width , self.heigth))
+        if self.gui == False:
+            pygame.display.init()
+
+        self.window = pygame.display.set_mode((self.width , self.heigth))
         
         #initialize variables for game
         
@@ -184,8 +186,7 @@ class Pong(object):
     def game_init(self):
         if self.gui == True:
             pygame.display.set_caption('PONG')
-            self.fps = pygame.time.Clock()
-        return
+        self.fps = pygame.time.Clock()
         
     def game_loop(self, frames_per_sec = 60):
         (self.ball_vel, self.ball_pos) = self.updateball_pos(self.ball_vel, self.ball_pos, self.padL_pos, self.padR_pos)
@@ -243,46 +244,18 @@ class Pong(object):
         
         # Draw the screen
         self.draw(self.window, self.padL_pos, self.padR_pos, self.ball_pos)
-
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                pygame.quit()
-                sys.exit()
-                self.running = False
         pygame.display.update()
+
+        #for event in pygame.event.get():
+        #    if event.type == QUIT:
+        #        pygame.quit()
+        #        sys.exit()
+        #        self.running = False
+        
         self.fps.tick(frames_per_sec)
         return reward
 
-    def np_array_screen_draw(self, width, heigth, padL, padR, ball_pos):
-        padL = padL.astype('int8')
-        padR = padR.astype('int8')
-        ball_pos = ball_pos.astype('int8')
-        screen = np.zeros(shape = (width,heigth))
-        screen[padL[0]: (padL[0] + self.pad_width), padL[1]: (padL[1] + self.pad_heigth)] = 1
-        screen[(padR[0] - self.pad_width): padR[0], padR[1]: (padR[1] + self.pad_heigth)] = 1
-        screen[ball_pos[0]:ball_pos[0] + 2*self.ball_radius, ball_pos[1]: ball_pos[1] + 2*self.ball_radius] = 1
-        return screen.astype('int8')
-
-
-    def game_loop_action_input_np(self, action):
-        self.padL_vel = 8
-        (self.ball_vel, self.ball_pos) = self.updateball_pos(self.ball_vel, self.ball_pos, self.padL_pos, self.padR_pos)
-            
-        # Observe if a game has been won or lost
-        reward = self.reward(self.ball_pos, self.ball_vel)
-            
-        # Update position of the left pad according to the action input    
-        self.padL_pos[1] = self.updatepad_pos_action(self.padL_vel, self.padL_pos[1], action)
-        # Let ai update the position of the right pad
-        self.padR_pos[1] = self.updatepad_pos_ai(self.pad_velocity_ai, self.padR_pos[1], self.ball_pos)
-        
-        # Draw the screen
-        screen = self.np_array_screen_draw(self.width, self.heigth, self.padL_pos, self.padR_pos, self.ball_pos)
-
-        return reward, screen
-
     def kill_game(self):
-        if self.gui == True:
-            pygame.quit()
+        pygame.quit()
         #sys.exit()
             

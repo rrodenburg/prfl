@@ -1,24 +1,26 @@
 import pong_lib
 import cnn_lib
 import rf_lib
-from sklearn.grid_search import ParameterGrid
+#from sklearn.grid_search import ParameterGrid
+from sklearn.model_selection import ParameterGrid
 
-logdir = '../eps/'
+logdir = '../lol_test/'
 
 # Network settings
 param_grid = {
                 'network_name' : ['nature_cnn'],
                 'trainer_name' : ['adam'],
-                'epsilon' : [1.0, 0.9, 0.7], #probability to play a random action
-                'epsilon_decay' : [0], # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
-                'frame_stacks' : [3],
-                'max_epochs' : [20],
-                'max_length_dataset' : [1e6], # Maximum size of the replay network dataset
+                'epsilon' : [0.9], #probability to play a random action
+                'epsilon_decay' : [500 * 250], # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
+                'frame_stacks' : [3,1],
+                'max_epochs' : [750],
+                'max_length_dataset' : [10e6], # Maximum size of the replay network dataset
                 'learning_rate' : [0.00025],
-                'replay_start_size' : [0], # Number of states of random play, before network starts action picking
+                'replay_start_size' : [50], # Number of states of random play, before network starts action picking
                 'mini_batch_size' : [16],
                 'network_copy' : [1000], # Number of backprop cycles needed to copy network weigths from training to target network
-                'epoch_length' : [500]
+                'epoch_length' : [500],
+                'gui' : [True]
                 }
 
 grid = ParameterGrid(param_grid)
@@ -43,11 +45,13 @@ def run_training(x, logdir = logdir):
                     ball_radius = 2, 
                     pad_width = 4, 
                     pad_heigth = 14, 
-                    pad_velocity = 8, 
-                    pad_velocity_ai = 4,
+                    pad_velocity = 1, 
+                    pad_velocity_ai = 3,
                     DistPadWall = 4,
-                    ball_velocity = 0.7,
-                    speed_increase = 0.2)
+                    ball_velocity = 0.4,
+                    speed_increase = 0.1,
+                    gui = x['gui']
+                    )
     
     #### Initialize tensorflow graph
     cnn = cnn_lib.Network(
@@ -67,7 +71,8 @@ def run_training(x, logdir = logdir):
                     frame_stacks = x['frame_stacks'],
                     epsilon_decay = x['epsilon_decay'],
                     cnn = cnn,
-                    game = game
+                    game = game,
+                    gui = x['gui']
     				)
     
     
@@ -141,6 +146,5 @@ def run_training(x, logdir = logdir):
 
     return
 
-#run_training(logdir, network_name, trainer_name, frame_stacks, max_epochs, max_length_dataset, learning_rate, replay_start_size, mini_batch_size, network_copy, epoch_length, epsilon, epsilon_decay)
 for params in grid:
     run_training(params, logdir = logdir)

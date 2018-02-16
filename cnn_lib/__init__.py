@@ -17,11 +17,16 @@ class Network(object):
 				logdir = '../tmp/1'
 				):
 
-		network_name_dict = {'nature_cnn' : self.nature_cnn}
+		network_name_dict = {
+							'nature_cnn' : self.nature_cnn,
+							'linear' : self.linear_model,
+							'one_conv' : self.one_conv
+								}
 
 		trainer_name_dict = {
 						'rms_prop' : self.train_rms_prop,
-						'adam' : self.train_ADAM}
+						'adam' : self.train_ADAM
+						}
 
 		tf.reset_default_graph()
 
@@ -162,6 +167,59 @@ class Network(object):
 			best_action = tf.argmax(input = output, axis = 1)
 			max_Q_value = tf.reduce_max(output, axis = 1, name = 'Q_max' + name)
 
+		return output, best_action, max_Q_value
+
+	def one_conv(self, x_input, name):
+
+		with tf.variable_scope("network" + name):
+		# Convolutional Layers
+			conv1 = tf.layers.conv2d(
+			  inputs = x_input,
+			  filters = 32,
+			  kernel_size = [8, 8],
+			  strides = (4,4),
+			  padding = "valid", #valid means no padding
+			  kernel_initializer = tf.contrib.layers.xavier_initializer_conv2d(),
+			  bias_initializer=tf.zeros_initializer(),
+			  activation = tf.nn.relu,
+			  name = 'conv1' + name) #output
+	
+			# Output layer (dense layer)
+			#flat = tf.layers.average_pooling2d(conv1, [84,84], [1,1], padding = 'valid') # I'm not sure what happens here but it is not correct!
+			flat = tf.reshape(conv1,[-1,20*20*32])
+			FC = tf.layers.dense(
+				inputs=flat, 
+				units = 512, 
+				kernel_initializer = tf.contrib.layers.xavier_initializer(), 
+				activation = tf.nn.relu, 
+				bias_initializer=tf.zeros_initializer(),
+				name = 'FC' + name)
+	
+			output = tf.layers.dense(
+				inputs = FC, 
+				units = 3,  
+				kernel_initializer = tf.contrib.layers.xavier_initializer(), 
+				bias_initializer=tf.zeros_initializer(),
+				name = 'output' + name)
+	
+			best_action = tf.argmax(input = output, axis = 1)
+			max_Q_value = tf.reduce_max(output, axis = 1, name = 'Q_max' + name)
+	
+		return output, best_action, max_Q_value
+
+	def linear_model(self, x_input, name):
+		with tf.variable_scope("network" + name):
+
+			flat = tf.reshape(x_input,[-1,self.width*self.heigth*self.frame_stacks])
+			output = tf.layers.dense(
+				inputs=flat, 
+				units = 3, 
+				kernel_initializer = tf.contrib.layers.xavier_initializer(), 
+				bias_initializer=tf.zeros_initializer(),
+				name = 'FC' + name)
+
+			best_action = tf.argmax(input = output, axis = 1)
+			max_Q_value = tf.reduce_max(output, axis = 1, name = 'Q_max' + name)
 		return output, best_action, max_Q_value
 
 	def loss_func(self):
