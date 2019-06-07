@@ -1,44 +1,55 @@
-import pong_lib
-import cnn_lib
-import rf_lib
-#from sklearn.grid_search import ParameterGrid
+import argparse
+import yaml
+from Pong import Pong
+from models import Network
+from ReinforcementLearning import make_logdir, write_settings_logfile, RF
 from sklearn.model_selection import ParameterGrid
 
-logdir = '../lol_test/'
+parser = argparse.ArgumentParser()
+parser.add_argument('param_yaml', help= 'Yaml file with grid search paramters')
+args = parser.parse_args()
 
-# Network settings
-param_grid = {
-                'network_name' : ['nature_cnn'],
-                'trainer_name' : ['adam'],
-                'epsilon' : [0.9], #probability to play a random action
-                'epsilon_decay' : [500 * 250], # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
-                'frame_stacks' : [3,1],
-                'max_epochs' : [750],
-                'max_length_dataset' : [10e6], # Maximum size of the replay network dataset
-                'learning_rate' : [0.00025],
-                'replay_start_size' : [50], # Number of states of random play, before network starts action picking
-                'mini_batch_size' : [16],
-                'network_copy' : [1000], # Number of backprop cycles needed to copy network weigths from training to target network
-                'epoch_length' : [500],
-                'gui' : [True]
-                }
+# Load the paramters
+with open(args.param_yaml) as parameter_yaml:
+    param_grid = yaml.load(parameter_yaml, Loader=yaml.Loader)
+
+# # Network settings
+# param_grid = {
+#                 'network_name' : ['nature_cnn'],
+#                 'trainer_name' : ['adam'],
+#                 'epsilon' : [0.9], #probability to play a random action
+#                 'epsilon_decay' : [500 * 250], # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
+#                 'frame_stacks' : [3,1],
+#                 'max_epochs' : [750],
+#                 'max_length_dataset' : [10e6], # Maximum size of the replay network dataset
+#                 'learning_rate' : [0.00025],
+#                 'replay_start_size' : [50], # Number of states of random play, before network starts action picking
+#                 'mini_batch_size' : [16],
+#                 'network_copy' : [1000], # Number of backprop cycles needed to copy network weigths from training to target network
+#                 'epoch_length' : [500],
+#                 'gui' : [True]
+                # }
+
+print(param_grid)
 
 grid = ParameterGrid(param_grid)
 
-def run_training(x, logdir = logdir):
+def run_training(x):
 
-    max_epochs, max_length_dataset, replay_start_size, network_copy, epoch_length = x['max_epochs'], x['max_length_dataset'], x['replay_start_size'], x['network_copy'], x['epoch_length']
+    max_epochs, max_length_dataset, replay_start_size,  = int(x['max_epochs']), int(x['max_length_dataset']), int(x['replay_start_size']), 
+    network_copy, epoch_length, mini_batch_size = int(x['network_copy']), int(x['epoch_length']), int(x['mini_batch_size'])
+    frame_stacks, learning_rate, epsilon, epsilon_decay = int(x['frame_stacks']), float(x['learning_rate']), float(x['epsilon']), int(x['epsilon_decay'])
 
     #### Create logfolder and write settings file
-    logfolder = rf_lib.make_logdir(logdir)
-    rf_lib.write_settings_logfile(logfolder, x)
+    logfolder = make_logdir(x['output_directory'])
+    write_settings_logfile(logfolder, x)
     
     # Window size of the game
     width = 84
     heigth = 84
 
     #### Initialize Pong
-    game = pong_lib.Pong( 
+    game = Pong( 
                     number_of_players = 1, 
                     width = width, 
                     heigth = heigth, 
@@ -54,28 +65,26 @@ def run_training(x, logdir = logdir):
                     )
     
     #### Initialize tensorflow graph
-    cnn = cnn_lib.Network(
+    cnn = Network(
     					width = width,
     					heigth = heigth,
-    					frame_stacks = x['frame_stacks'],
-    					learning_rate = x['learning_rate'],
-    					mini_batch_size = x['mini_batch_size'],
+    					frame_stacks = frame_stacks,
+    					learning_rate = learning_rate,
+    					mini_batch_size = mini_batch_size,
     					network_name = x['network_name'],
     					trainer_name = x['trainer_name'],
     					logdir = logfolder
     					)
     
     #### Initiazlize rf library using initialized network and game
-    rf = rf_lib.RF(
-    				epsilon = x['epsilon'],
-                    frame_stacks = x['frame_stacks'],
-                    epsilon_decay = x['epsilon_decay'],
+    rf = RF(
+    				epsilon = epsilon,
+                    frame_stacks = frame_stacks,
+                    epsilon_decay = epsilon_decay,
                     cnn = cnn,
                     game = game,
                     gui = x['gui']
     				)
-    
-    
     
     ######### START RF LEARNING LOOP ######
     
@@ -147,4 +156,4 @@ def run_training(x, logdir = logdir):
     return
 
 for params in grid:
-    run_training(params, logdir = logdir)
+    run_training(params)

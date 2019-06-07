@@ -1,0 +1,28 @@
+output_directory: exp
+network_name: 
+  - nature_cnn
+trainer_name: 
+  - adam
+epsilon: #probability to play a random action
+  - 0.9 
+epsilon_decay: # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
+  - 125000
+frame_stacks: 
+  - 3
+  - 1
+max_epochs: 
+  - 750
+max_length_dataset: # Maximum size of the replay network dataset
+  - 10000000
+learning_rate: 
+  - 0.00025
+replay_start_size: # Number of states of random play, before network starts action picking
+  - 50  
+mini_batch_size: 
+  - 16
+network_copy: # Number of backprop cycles needed to copy network weigths from training to target network
+  - 1000 
+epoch_length: 
+  - 2500
+gui:
+  - True

@@ -321,3 +321,4 @@ class Network(object):
 		s = self.sess.run(self.summ_per_epoch)
 
 		self.writer.add_summary(s, epoch)
+        

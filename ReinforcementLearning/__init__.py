@@ -1,6 +1,5 @@
-
-import pong_lib
-import cnn_lib
+import Pong
+import cnn
 import time
 import numpy as np
 import pygame
