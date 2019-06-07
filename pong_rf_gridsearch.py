@@ -13,20 +13,11 @@ args = parser.parse_args()
 # Load the paramters
 with open(args.param_yaml) as parameter_yaml:
     param_grid = yaml.load(parameter_yaml, Loader=yaml.Loader)
-    print(param_grid)
-     
 
 grid = ParameterGrid(param_grid)
-print(grid[0]['max_epochs'])
 
 def run_training(output_directory, max_epochs, max_length_dataset, replay_start_size, network_copy, epoch_length, mini_batch_size,
                  frame_stacks, learning_rate, epsilon, epsilon_decay, network_name, trainer_name, gui):
-
-    # max_epochs, max_length_dataset, replay_start_size,  = x['max_epochs'], x['max_length_dataset'], x['replay_start_size'], 
-    # network_copy, epoch_length, mini_batch_size = int(x['network_copy']), int(x['epoch_length']), int(x['mini_batch_size'])
-    # learning_rate, epsilon, epsilon_decay = float(x['learning_rate']), float(x['epsilon']), int(x['epsilon_decay'])
-
-    # frame_stacks = x['frame_stacks']
     
     # Window size of the game
     width = 84
