@@ -13,25 +13,6 @@ args = parser.parse_args()
 with open(args.param_yaml) as parameter_yaml:
     param_grid = yaml.load(parameter_yaml, Loader=yaml.Loader)
 
-# # Network settings
-# param_grid = {
-#                 'network_name' : ['nature_cnn'],
-#                 'trainer_name' : ['adam'],
-#                 'epsilon' : [0.9], #probability to play a random action
-#                 'epsilon_decay' : [500 * 250], # number of backprop cycles to linear scale epsilon to 1. Put 0 for no decay
-#                 'frame_stacks' : [3,1],
-#                 'max_epochs' : [750],
-#                 'max_length_dataset' : [10e6], # Maximum size of the replay network dataset
-#                 'learning_rate' : [0.00025],
-#                 'replay_start_size' : [50], # Number of states of random play, before network starts action picking
-#                 'mini_batch_size' : [16],
-#                 'network_copy' : [1000], # Number of backprop cycles needed to copy network weigths from training to target network
-#                 'epoch_length' : [500],
-#                 'gui' : [True]
-                # }
-
-print(param_grid)
-
 grid = ParameterGrid(param_grid)
 
 def run_training(x):
@@ -81,7 +62,7 @@ def run_training(x):
     				epsilon = epsilon,
                     frame_stacks = frame_stacks,
                     epsilon_decay = epsilon_decay,
-                    cnn = cnn,
+                    model = cnn,
                     game = game,
                     gui = x['gui']
     				)

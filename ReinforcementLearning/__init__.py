@@ -1,17 +1,18 @@
 import Pong
-import cnn
+import models
 import time
 import numpy as np
 import pygame
 import random
 import os
+from pathlib import Path
 
 def make_logdir(logdir):
 	subfolder = 1
-	logfolder = logdir + str(subfolder)
+	logfolder = Path(logdir) / str(subfolder)
 	while os.path.isdir(logfolder) == True:
 		subfolder += 1
-		logfolder = logdir + str(subfolder)
+		logfolder = Path(logdir) / str(subfolder)
 	
 	if not os.path.exists(logfolder):
 	    os.makedirs(logfolder)
@@ -23,7 +24,7 @@ def make_logdir(logdir):
 def write_settings_logfile(logfolder, x):
 	
 	# write file in log directory
-	with open(logfolder + '/settings.txt', 'w+') as f:
+	with open(logfolder / 'settings.txt', 'w+') as f:
 		for key, val in x.items():
 			f.write(key + ':' + str(val) + '\n')
 
@@ -36,7 +37,7 @@ class RF(object):
 				epsilon = 0.9,
 				epsilon_decay = 40000,
 				frame_stacks = 4,
-				cnn = None,
+				model = None,
 				game = None,
 				gui = False
 				):
@@ -44,7 +45,7 @@ class RF(object):
 		self.epsilon = epsilon
 		self.epsilon_decay = epsilon_decay
 		self.frame_stacks = frame_stacks
-		self.cnn = cnn
+		self.model = model
 		self.game = game
 		self.gui = gui
 		
@@ -81,7 +82,7 @@ class RF(object):
 			current_epsilon = (self.epsilon + (1 - self.epsilon) * (min(1,backprop_cycles / self.epsilon_decay)))
 
 		if total_transition_count > replay_start_size and  current_epsilon > random.uniform(0, 1) and episode_state_count > 0:
-			action= self.cnn.pick_greedy_action(state) ## Let model pick next action to play, 0 = stay, 1 = up, 2 = down
+			action= self.model.pick_greedy_action(state) ## Let model pick next action to play, 0 = stay, 1 = up, 2 = down
 		else:
 		    action = np.random.randint(3) ## Play random action
 		return action
@@ -176,7 +177,7 @@ class RF(object):
 		if n_games_played > 0:
 			mean_score = games_won / n_games_played
 	
-		self.cnn.accumulate_epoch_stats(mean_score, n_games_played, epoch_time, epoch)
+		self.model.accumulate_epoch_stats(mean_score, n_games_played, epoch_time, epoch)
 		epoch += 1
 	
 		print('epoch {}: epoch time {}, n_games_played {} , games_won {}, average_score {}'.format(epoch, epoch_time, n_games_played, games_won, mean_score))

@@ -1,11 +1,11 @@
 #Jupyter checkpoints
-.ipynb_checkpoints
+.ipynb_checkpoints/
 
 #Python Cach
 __pycache__
 
 #VS code files
-.vscode
+.vscode/
 
 # Experiment folder
 exp/

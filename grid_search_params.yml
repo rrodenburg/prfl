@@ -1,4 +1,5 @@
-output_directory: exp
+output_directory: 
+  - exp
 network_name: 
   - nature_cnn
 trainer_name: 
