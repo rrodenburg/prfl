@@ -7,23 +7,26 @@ from sklearn.model_selection import ParameterGrid
 
 parser = argparse.ArgumentParser()
 parser.add_argument('param_yaml', help= 'Yaml file with grid search paramters')
+parser.add_argument('output_directory', help= 'Directory to store results')
 args = parser.parse_args()
 
 # Load the paramters
 with open(args.param_yaml) as parameter_yaml:
     param_grid = yaml.load(parameter_yaml, Loader=yaml.Loader)
+    print(param_grid)
+     
 
 grid = ParameterGrid(param_grid)
+print(grid[0]['max_epochs'])
 
-def run_training(x):
+def run_training(output_directory, max_epochs, max_length_dataset, replay_start_size, network_copy, epoch_length, mini_batch_size,
+                 frame_stacks, learning_rate, epsilon, epsilon_decay, network_name, trainer_name, gui):
 
-    max_epochs, max_length_dataset, replay_start_size,  = int(x['max_epochs']), int(x['max_length_dataset']), int(x['replay_start_size']), 
-    network_copy, epoch_length, mini_batch_size = int(x['network_copy']), int(x['epoch_length']), int(x['mini_batch_size'])
-    frame_stacks, learning_rate, epsilon, epsilon_decay = int(x['frame_stacks']), float(x['learning_rate']), float(x['epsilon']), int(x['epsilon_decay'])
+    # max_epochs, max_length_dataset, replay_start_size,  = x['max_epochs'], x['max_length_dataset'], x['replay_start_size'], 
+    # network_copy, epoch_length, mini_batch_size = int(x['network_copy']), int(x['epoch_length']), int(x['mini_batch_size'])
+    # learning_rate, epsilon, epsilon_decay = float(x['learning_rate']), float(x['epsilon']), int(x['epsilon_decay'])
 
-    #### Create logfolder and write settings file
-    logfolder = make_logdir(x['output_directory'])
-    write_settings_logfile(logfolder, x)
+    # frame_stacks = x['frame_stacks']
     
     # Window size of the game
     width = 84
@@ -42,7 +45,7 @@ def run_training(x):
                     DistPadWall = 4,
                     ball_velocity = 0.4,
                     speed_increase = 0.1,
-                    gui = x['gui']
+                    gui = gui
                     )
     
     #### Initialize tensorflow graph
@@ -52,8 +55,8 @@ def run_training(x):
     					frame_stacks = frame_stacks,
     					learning_rate = learning_rate,
     					mini_batch_size = mini_batch_size,
-    					network_name = x['network_name'],
-    					trainer_name = x['trainer_name'],
+    					network_name = network_name,
+    					trainer_name = trainer_name,
     					logdir = logfolder
     					)
     
@@ -64,7 +67,7 @@ def run_training(x):
                     epsilon_decay = epsilon_decay,
                     model = cnn,
                     game = game,
-                    gui = x['gui']
+                    gui = gui
     				)
     
     ######### START RF LEARNING LOOP ######
@@ -137,4 +140,7 @@ def run_training(x):
     return
 
 for params in grid:
-    run_training(params)
+    #### Create logfolder and write settings file
+    logfolder = make_logdir(args.output_directory)
+    write_settings_logfile(logfolder, params)
+    run_training(logfolder, **params)
