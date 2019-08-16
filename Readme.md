@@ -8,13 +8,13 @@ In Deep Q learning, we aim to train a [convolutional neural network](https://en.
 
 The CNN has only raw pixels as input, it does not have any prior knowledge about the game.
 
-!['hoi'](images/input_image_example.png)
+!['input pixels'](images/input_image_example.png)
 
 Pong is implemented in pygame (for visuals) and numpy (for training speed).
 
 ## Installing dependencies
 
-Install dependencies in a new anaconda environment and activate the environment:
+Install dependencies in a new anaconda environment and activate the environment (tested on Windows):
 
 ```
 conda env create -f environment.yml
@@ -30,5 +30,12 @@ Reinforcement and CNN hyperparameters are specified in the params.yml. If hyperp
 Follow result stats bin tensorboard by:
 
 `tensorboard --logdir exp --host localhost --port 8008`
+
+## Expected Results
+
+!["games per epoch"](images/games_per_epoch.png)
+!["score per epoch"](images/score_per_epoch.png)
+
+!["experienced play"](images/experienced_play.gif)
 
 
