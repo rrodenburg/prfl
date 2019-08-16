@@ -6,7 +6,7 @@ from ReinforcementLearning import make_logdir, write_settings_logfile, RF
 from sklearn.model_selection import ParameterGrid
 
 parser = argparse.ArgumentParser()
-parser.add_argument('param_yaml', help= 'Yaml file with grid search paramters')
+parser.add_argument('param_yaml', help= 'Yaml file with grid sunnearch paramters')
 parser.add_argument('output_directory', help= 'Directory to store results')
 args = parser.parse_args()
 
@@ -64,7 +64,6 @@ def run_training(output_directory, max_epochs, max_length_dataset, replay_start_
     ######### START RF LEARNING LOOP ######
     
     # Initialize reninforcement learning dataset, and stats.
-    
     dataset, total_transition_count, n_games_played, games_won, mean_score, epoch, epoch_time, backprop_cycles = rf.rf_initialization()
     
     #initialize tensorflow settings and variables
